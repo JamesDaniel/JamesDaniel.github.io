@@ -201,7 +201,7 @@
                         const y1 = deemedDisposalAdjustment[i-9];
                         const y2 = deemedDisposalAdjustment[i-8]
                         const amountGained = (y2 - (monthlyContribution*12)) - y1;
-                        const fourtyPercentOfInterest = amountGained*0.4;
+                        const fourtyPercentOfInterest = amountGained*0.41;
                         deemedDisposalAdjustment.push(total - fourtyPercentOfInterest);
                         if (i==9) {
                             console.log(y1);
@@ -236,7 +236,7 @@
                         data: data.endOfYearInterest,
                         borderWidth: 3
                     },{
-                        label: `Deemed Disposal Adjustment (-40% of profit on 8th year)`,
+                        label: `Deemed Disposal Adjustment (-41% of profit on 8th year)`,
                         data: data.deemedDisposalAdjustment,
                         borderWidth: 3
                     }]
