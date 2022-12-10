@@ -165,7 +165,7 @@
             </div>
         </div>
 
-        <script src="js/chart.js" ></script>
+        <script src="js/chart.js"></script>
         <script>
             function getYearLabels(numOfYears) {
                 const years = [];
@@ -186,7 +186,37 @@
                     }
                     endOfYearInterest.push(total);
                 }
-                return endOfYearInterest;
+
+                const deemedDisposalAdjustment = [initialInvestment];
+                for (let i=1; i<numOfYears+1; i++) {
+                    let total=0;
+                    const prev = deemedDisposalAdjustment[i-1];
+                    total = ((interestRate/100.0)*prev)+prev;
+
+                    if (monthlyContribution>0) {
+                        total += monthlyContribution*12;
+                    }
+
+                    if (i>8) {
+                        const y1 = deemedDisposalAdjustment[i-9];
+                        const y2 = deemedDisposalAdjustment[i-8]
+                        const amountGained = (y2 - (monthlyContribution*12)) - y1;
+                        const fourtyPercentOfInterest = amountGained*0.4;
+                        deemedDisposalAdjustment.push(total - fourtyPercentOfInterest);
+                        if (i==9) {
+                            console.log(y1);
+                            console.log(y2);
+                            console.log(amountGained);
+                            console.log(fourtyPercentOfInterest);
+                        }
+                    } else {
+                        deemedDisposalAdjustment.push(total);
+                    }
+                }
+                return {
+                    endOfYearInterest,
+                    deemedDisposalAdjustment
+                };
             }
             function loadChart(data, interest) {
                 const ctx = document.getElementById('chart');
@@ -196,13 +226,18 @@
                     chart.destroy();
                 }
 
+                let labels = getYearLabels(data.endOfYearInterest.length);
                 new Chart(ctx, {
                     type: 'line',
                     data: {
-                    labels: getYearLabels(data.length),
+                    labels: labels,
                     datasets: [{
                         label: `Future Value (${interest}%)`,
-                        data: data,
+                        data: data.endOfYearInterest,
+                        borderWidth: 3
+                    },{
+                        label: `Deemed Disposal Adjustment (-40% of profit on 8th year)`,
+                        data: data.deemedDisposalAdjustment,
                         borderWidth: 3
                     }]
                     },
