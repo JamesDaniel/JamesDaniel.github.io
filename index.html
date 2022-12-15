@@ -4,84 +4,7 @@
         <title>ETF Cumulative Interest Calculator</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
-        <style>
-            body {
-                background-color: #1f7779;
-                padding-top: 1.5em;
-            }
-            h2 {
-                text-align: center;
-                color: #fff;
-                margin-bottom: 20px;
-            }
-            h3 {
-                color: #fff;
-                background: #218383;
-                font-weight: 400;
-                padding: 10px 10px;
-                margin: 0;
-                font-size: 1.5em;
-                font-family: "Arvo",serif;
-            }
-            h4 {
-                color: #fff;
-                background-color: #00325b;
-                padding-top: 10px;
-                padding-left: 10px;
-                margin-top: 15px;
-                margin-left: 15px;
-                font-size: 1.5em;
-                font-weight: bold;
-                font-family: "Open Sans",sans-serif;
-            }
-            .detail {
-                background-color: #00325b;
-                margin: 0px;
-            }
-            .detail-padding {
-                margin-top: 1px;
-            }
-            input {
-                float: right;
-                margin-top: 23px;
-                margin-right: 23px;
-                background-color: ivory;
-                border: none;
-                max-width: 9em;
-            }
-            p {
-                color: #fff;
-                margin-left: 42px;
-                margin-bottom: 20px;
-                font-family: "Open Sans",sans-serif;
-            }
-            button {
-                float: right;
-                margin: 23px;
-                background-color: #bf280d;
-                font-weight: bold;
-                color: #fff;
-                padding: 7px 15px 7px 15px;
-                border: none;
-            }
-            button:hover {
-                border: 1px solid #fff;
-                padding: 6px 15px 6px 15px;
-            }
-            .alert {
-                padding: 20px;
-                margin-top: -21px;
-                background-color: #ff9800;
-                color: white;
-            }
-            .chart {
-                background-color: ivory;
-                display: none;
-            }
-            #amountAfterTax {
-                display: none;
-            }
-        </style>
+        <link rel="stylesheet" href="css/main.css">
     </head>
     <body>
         <noscript>
@@ -166,7 +89,7 @@
             <!-- Buttons -->
             <div class="row detail detail-padding">
                 <div class="col-xs-12">
-                    <button id="submit" onClick="submit()">CALCULATE</button>
+                    <button id="submit">CALCULATE</button>
                 </div>
             </div>
             
@@ -182,122 +105,6 @@
         </div>
 
         <script src="js/chart.js"></script>
-        <script>
-            function getYearLabels(numOfYears) {
-                const years = [];
-                for (let i=0; i<numOfYears; i++) {
-                    years.push(`Year ${i}`);
-                }
-                return years;
-            }
-            function calculateInterest(initialInvestment, monthlyContribution, numOfYears, interestRate) {
-                const endOfYearInterest = [initialInvestment];
-                for (let i=1; i<numOfYears+1; i++) {
-                    let total=0;
-                    const prev = endOfYearInterest[i-1];
-                    total = ((interestRate/100.0)*prev)+prev;
-
-                    if (monthlyContribution>0) {
-                        total += monthlyContribution*12;
-                    }
-                    endOfYearInterest.push(total);
-                }
-
-                const deemedDisposalAdjustment = [initialInvestment];
-                // const pristineInterestAmounts = [];
-                const interestAmounts = [];
-                for (let i=1; i<numOfYears+1; i++) {
-                    let total=0;
-                    const prev = deemedDisposalAdjustment[i-1];
-                    const inter = interestRate/100.0;
-                    const interest = prev*inter;
-                    // pristineInterestAmounts.push(interest);
-                    interestAmounts.push(interest);
-                    total = prev+interest;
-
-                    if (monthlyContribution>0) {
-                        total += monthlyContribution*12;
-                    }
-
-                    if (i>8) {
-                        const amountGained = interestAmounts.shift();
-                        const fourtyPercentOfInterest = amountGained*0.41;
-                        deemedDisposalAdjustment.push(total - fourtyPercentOfInterest);
-                    } else {
-                        deemedDisposalAdjustment.push(total);
-                    }
-                }
-                let startIndex = 0;
-                if (deemedDisposalAdjustment.length > 8) {
-                    startIndex = numOfYears-8;
-                }
-                const end = deemedDisposalAdjustment[numOfYears];
-                let totalInterestGainedNotYetTaxed=0;
-                for (let i = 0; i<interestAmounts.length; i++) {
-                    totalInterestGainedNotYetTaxed += interestAmounts[i];
-                }
-                let taxDue = totalInterestGainedNotYetTaxed*0.41;
-                const amountAfterTax = end - taxDue;
-                return {
-                    endOfYearInterest,
-                    deemedDisposalAdjustment,
-                    amountAfterTax
-                };
-            }
-            function loadChart(data, interest) {
-                const ctx = document.getElementById('chart');
-
-                const chart = Chart.getChart('chart');
-                if (typeof chart !== 'undefined') {
-                    chart.destroy();
-                }
-
-                let labels = getYearLabels(data.endOfYearInterest.length);
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                    labels: labels,
-                    datasets: [{
-                        label: `Future Value (${interest}%)`,
-                        data: data.endOfYearInterest,
-                        borderWidth: 3
-                    },{
-                        label: `Deemed Disposal Adjustment`,
-                        data: data.deemedDisposalAdjustment,
-                        borderWidth: 3
-                    }]
-                    },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
-            }
-            function formatNumber(floatNum) {
-                let num = Intl.NumberFormat('en-IE').format(floatNum.toFixed(2)) + "";
-                if (num.indexOf(".") > -1) {
-                    if (num.split('.')[1].length === 1){
-                        return `${num}0`;
-                    }
-                } else {
-                    return `${num}.00`;
-                }
-                return num;
-            }
-            function submit() {
-                document.getElementsByClassName('chart')[0].style.display='block';
-                const initialInvestment = parseFloat(document.getElementById('initialInvestment').value);
-                const monthlyContribution = parseFloat(document.getElementById('monthlyContribution').value);
-                const years = parseFloat(document.getElementById('years').value);
-                const interestRate = parseFloat(document.getElementById('interestRate').value);
-                const data = calculateInterest(initialInvestment, monthlyContribution, years, interestRate);
-                document.getElementById('amountAfterTax').style.display='block';
-                document.getElementById('amountAfterTax').innerHTML=`In ${years} years, you will have &euro;${formatNumber(data.amountAfterTax)} after tax`;
-                loadChart(data, interestRate);
-            }
-        </script>
+        <script src="js/bundle.js"></script>
     </body>
 </html>

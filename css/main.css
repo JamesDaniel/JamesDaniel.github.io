@@ -1,0 +1,76 @@
+body {
+    background-color: #1f7779;
+    padding-top: 1.5em;
+}
+h2 {
+    text-align: center;
+    color: #fff;
+    margin-bottom: 20px;
+}
+h3 {
+    color: #fff;
+    background: #218383;
+    font-weight: 400;
+    padding: 10px 10px;
+    margin: 0;
+    font-size: 1.5em;
+    font-family: "Arvo",serif;
+}
+h4 {
+    color: #fff;
+    background-color: #00325b;
+    padding-top: 10px;
+    padding-left: 10px;
+    margin-top: 15px;
+    margin-left: 15px;
+    font-size: 1.5em;
+    font-weight: bold;
+    font-family: "Open Sans",sans-serif;
+}
+.detail {
+    background-color: #00325b;
+    margin: 0px;
+}
+.detail-padding {
+    margin-top: 1px;
+}
+input {
+    float: right;
+    margin-top: 23px;
+    margin-right: 23px;
+    background-color: ivory;
+    border: none;
+    max-width: 9em;
+}
+p {
+    color: #fff;
+    margin-left: 42px;
+    margin-bottom: 20px;
+    font-family: "Open Sans",sans-serif;
+}
+button {
+    float: right;
+    margin: 23px;
+    background-color: #bf280d;
+    font-weight: bold;
+    color: #fff;
+    padding: 7px 15px 7px 15px;
+    border: none;
+}
+button:hover {
+    border: 1px solid #fff;
+    padding: 6px 15px 6px 15px;
+}
+.alert {
+    padding: 20px;
+    margin-top: -21px;
+    background-color: #ff9800;
+    color: white;
+}
+.chart {
+    background-color: ivory;
+    display: none;
+}
+#amountAfterTax {
+    display: none;
+}

@@ -1,0 +1,26 @@
+{
+  "name": "jamesdaniel.github.io",
+  "version": "1.0.0",
+  "description": "- <a href=\"https://jamesdaniel.github.io/\">https://jamesdaniel.github.io/</a>",
+  "main": "index.js",
+  "scripts": {
+    "build": "browserify js/main.js > js/bundle.js",
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JamesDaniel/JamesDaniel.github.io.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JamesDaniel/JamesDaniel.github.io/issues"
+  },
+  "homepage": "https://github.com/JamesDaniel/JamesDaniel.github.io#readme",
+  "devDependencies": {
+    "mocha": "^10.2.0"
+  },
+  "dependencies": {
+    "browserify": "^17.0.0"
+  }
+}
