@@ -135,6 +135,7 @@ describe('Tests', function () {
         assertArrayEqual(expected, actual)
     });
     function assertArrayEqual(expected, actual) {
+        assert.equal(expected.length, actual.length);
         for (let i=0; i<actual.length; i++) {
             assert.equal(actual[i], expected[i])
         }
