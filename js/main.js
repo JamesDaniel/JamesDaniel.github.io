@@ -5,7 +5,7 @@ function getYearLabels(numOfYears) {
     }
     return years;
 }
-function calculateInterest(initialInvestment, monthlyContribution, numOfYears, interestRate) {
+function calculateCumulativeInterest(initialInvestment, monthlyContribution, numOfYears, interestRate) {
     const endOfYearInterest = [initialInvestment];
     for (let i=1; i<numOfYears+1; i++) {
         let total=0;
@@ -17,9 +17,10 @@ function calculateInterest(initialInvestment, monthlyContribution, numOfYears, i
         }
         endOfYearInterest.push(total);
     }
-
+    return endOfYearInterest;
+}
+function calculateDeemedDisposalOffset(initialInvestment, monthlyContribution, numOfYears, interestRate, interestAmounts) {
     const deemedDisposalAdjustment = [initialInvestment];
-    const interestAmounts = [];
     for (let i=1; i<numOfYears+1; i++) {
         let total=0;
         const prev = deemedDisposalAdjustment[i-1];
@@ -40,20 +41,18 @@ function calculateInterest(initialInvestment, monthlyContribution, numOfYears, i
             deemedDisposalAdjustment.push(total);
         }
     }
-    const end = deemedDisposalAdjustment[numOfYears];
+    return deemedDisposalAdjustment;
+}
+function calculateAmountAfterTax(gainedInterestAmounts, finalAmount) {
     let totalInterestGainedNotYetTaxed=0;
-    for (let i = 0; i<interestAmounts.length; i++) {
-        totalInterestGainedNotYetTaxed += interestAmounts[i];
+    for (let i = 0; i<gainedInterestAmounts.length; i++) {
+        totalInterestGainedNotYetTaxed += gainedInterestAmounts[i];
     }
     let taxDue = totalInterestGainedNotYetTaxed*0.41;
-    const amountAfterTax = end - taxDue;
-    return {
-        endOfYearInterest,
-        deemedDisposalAdjustment,
-        amountAfterTax
-    };
+    const amountAfterTax = finalAmount - taxDue;
+    return amountAfterTax;
 }
-function loadChart(data, interest) {
+function loadChart(data) {
     const ctx = document.getElementById('chart');
 
     const chart = Chart.getChart('chart');
@@ -67,7 +66,7 @@ function loadChart(data, interest) {
         data: {
         labels: labels,
         datasets: [{
-            label: `Future Value (${interest}%)`,
+            label: `Future Value`,
             data: data.endOfYearInterest,
             borderWidth: 3
         },{
@@ -102,16 +101,26 @@ function submit() {
     const monthlyContribution = parseFloat(document.getElementById('monthlyContribution').value);
     const years = parseFloat(document.getElementById('years').value);
     const interestRate = parseFloat(document.getElementById('interestRate').value);
-    const data = calculateInterest(initialInvestment, monthlyContribution, years, interestRate);
+    const endOfYearInterest = calculateCumulativeInterest(initialInvestment, monthlyContribution, years, interestRate);
+    const interestAmounts = [];
+    const deemedDisposalAdjustment = calculateDeemedDisposalOffset(initialInvestment, monthlyContribution, years, interestRate, interestAmounts);
+    const amountAfterTax = calculateAmountAfterTax(interestAmounts, deemedDisposalAdjustment[deemedDisposalAdjustment.length - 1]);
     document.getElementById('amountAfterTax').style.display='block';
-    document.getElementById('amountAfterTax').innerHTML=`In ${years} years, you will have &euro;${formatNumber(data.amountAfterTax)} after tax`;
-    loadChart(data, interestRate);
+    document.getElementById('amountAfterTax').innerHTML=`In ${years} years, you will have &euro;${formatNumber(amountAfterTax)} after tax`;
+    const data = {
+        endOfYearInterest,
+        deemedDisposalAdjustment,
+        amountAfterTax
+    }
+    loadChart(data);
 }
 
 module.exports.getYearLabels = getYearLabels;
-module.exports.calculateInterest = calculateInterest;
-module.exports.loadChart = loadChart;
 module.exports.formatNumber = formatNumber;
+module.exports.calculateCumulativeInterest = calculateCumulativeInterest;
+module.exports.calculateDeemedDisposalOffset = calculateDeemedDisposalOffset;
+module.exports.calculateAmountAfterTax = calculateAmountAfterTax;
+module.exports.loadChart = loadChart;
 module.exports.submit = submit;
 
 if (typeof document !== 'undefined') {
