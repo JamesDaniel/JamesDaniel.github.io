@@ -9,6 +9,11 @@
                 background-color: #1f7779;
                 padding-top: 1.5em;
             }
+            h2 {
+                text-align: center;
+                color: #fff;
+                margin-bottom: 20px;
+            }
             h3 {
                 color: #fff;
                 background: #218383;
@@ -27,7 +32,7 @@
                 margin-left: 15px;
                 font-size: 1.5em;
                 font-weight: bold;
-                font-family: "Arvo",serif;
+                font-family: "Open Sans",sans-serif;
             }
             .detail {
                 background-color: #00325b;
@@ -48,6 +53,7 @@
                 color: #fff;
                 margin-left: 42px;
                 margin-bottom: 20px;
+                font-family: "Open Sans",sans-serif;
             }
             button {
                 float: right;
@@ -70,6 +76,9 @@
             }
             .chart {
                 background-color: ivory;
+                display: none;
+            }
+            #amountAfterTax {
                 display: none;
             }
         </style>
@@ -160,6 +169,13 @@
                     <button id="submit" onClick="submit()">CALCULATE</button>
                 </div>
             </div>
+            
+            <!-- Results -->
+            <div class="row">
+                <div class="col-xs-12">
+                    <h2 id="amountAfterTax"></h2>
+                </div>
+            </div>
             <div class="chart">
                 <canvas id="chart"></canvas>
             </div>
@@ -188,34 +204,44 @@
                 }
 
                 const deemedDisposalAdjustment = [initialInvestment];
+                // const pristineInterestAmounts = [];
+                const interestAmounts = [];
                 for (let i=1; i<numOfYears+1; i++) {
                     let total=0;
                     const prev = deemedDisposalAdjustment[i-1];
-                    total = ((interestRate/100.0)*prev)+prev;
+                    const inter = interestRate/100.0;
+                    const interest = prev*inter;
+                    // pristineInterestAmounts.push(interest);
+                    interestAmounts.push(interest);
+                    total = prev+interest;
 
                     if (monthlyContribution>0) {
                         total += monthlyContribution*12;
                     }
 
                     if (i>8) {
-                        const y1 = deemedDisposalAdjustment[i-9];
-                        const y2 = deemedDisposalAdjustment[i-8]
-                        const amountGained = (y2 - (monthlyContribution*12)) - y1;
+                        const amountGained = interestAmounts.shift();
                         const fourtyPercentOfInterest = amountGained*0.41;
                         deemedDisposalAdjustment.push(total - fourtyPercentOfInterest);
-                        if (i==9) {
-                            console.log(y1);
-                            console.log(y2);
-                            console.log(amountGained);
-                            console.log(fourtyPercentOfInterest);
-                        }
                     } else {
                         deemedDisposalAdjustment.push(total);
                     }
                 }
+                let startIndex = 0;
+                if (deemedDisposalAdjustment.length > 8) {
+                    startIndex = numOfYears-8;
+                }
+                const end = deemedDisposalAdjustment[numOfYears];
+                let totalInterestGainedNotYetTaxed=0;
+                for (let i = 0; i<interestAmounts.length; i++) {
+                    totalInterestGainedNotYetTaxed += interestAmounts[i];
+                }
+                let taxDue = totalInterestGainedNotYetTaxed*0.41;
+                const amountAfterTax = end - taxDue;
                 return {
                     endOfYearInterest,
-                    deemedDisposalAdjustment
+                    deemedDisposalAdjustment,
+                    amountAfterTax
                 };
             }
             function loadChart(data, interest) {
@@ -236,7 +262,7 @@
                         data: data.endOfYearInterest,
                         borderWidth: 3
                     },{
-                        label: `Deemed Disposal Adjustment (-41% of profit on 8th year)`,
+                        label: `Deemed Disposal Adjustment`,
                         data: data.deemedDisposalAdjustment,
                         borderWidth: 3
                     }]
@@ -250,13 +276,27 @@
                     }
                 });
             }
+            function formatNumber(floatNum) {
+                let num = Intl.NumberFormat('en-IE').format(floatNum.toFixed(2)) + "";
+                if (num.indexOf(".") > -1) {
+                    if (num.split('.')[1].length === 1){
+                        return `${num}0`;
+                    }
+                } else {
+                    return `${num}.00`;
+                }
+                return num;
+            }
             function submit() {
                 document.getElementsByClassName('chart')[0].style.display='block';
                 const initialInvestment = parseFloat(document.getElementById('initialInvestment').value);
                 const monthlyContribution = parseFloat(document.getElementById('monthlyContribution').value);
                 const years = parseFloat(document.getElementById('years').value);
                 const interestRate = parseFloat(document.getElementById('interestRate').value);
-                loadChart(calculateInterest(initialInvestment, monthlyContribution, years, interestRate), interestRate);
+                const data = calculateInterest(initialInvestment, monthlyContribution, years, interestRate);
+                document.getElementById('amountAfterTax').style.display='block';
+                document.getElementById('amountAfterTax').innerHTML=`In ${years} years, you will have &euro;${formatNumber(data.amountAfterTax)} after tax`;
+                loadChart(data, interestRate);
             }
         </script>
     </body>
