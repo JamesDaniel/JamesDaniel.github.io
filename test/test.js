@@ -118,9 +118,25 @@ describe('Tests', function () {
         const actual = main.calculateAmountAfterTax(interestAmounts, finalAmount);
         assert.equal(expected, actual)
     });
+    it('should calculate total contribution 18 years', function () {
+        const initialInvestment = 1000;
+        const monthlyContribution = 1200;
+        const years = 18;
+        const expected = [
+            1000,  15400,  29800,
+           44200,  58600,  73000,
+           87400, 101800, 116200,
+          130600, 145000, 159400,
+          173800, 188200, 202600,
+          217000, 231400, 245800,
+          260200
+        ];
+        const actual = main.calculateTotalContributions(initialInvestment, monthlyContribution, years);
+        assertArrayEqual(expected, actual)
+    });
     function assertArrayEqual(expected, actual) {
-        for (let i=0; i<expected; i++) {
-            assert.equal(expected[i], actual[i])
+        for (let i=0; i<actual.length; i++) {
+            assert.equal(actual[i], expected[i])
         }
     }
 });

@@ -52,6 +52,14 @@ function calculateAmountAfterTax(gainedInterestAmounts, finalAmount) {
     const amountAfterTax = finalAmount - taxDue;
     return amountAfterTax;
 }
+function calculateTotalContributions(initialInvestment, monthlyContribution, years) {
+    const contributions = [];
+    contributions.push(initialInvestment);
+    for (let i=1; i<years + 1; i++) {
+        contributions.push((monthlyContribution*12) + contributions[i-1]);
+    }
+    return contributions;
+}
 function loadChart(data) {
     const ctx = document.getElementById('chart');
 
@@ -72,6 +80,10 @@ function loadChart(data) {
         },{
             label: `Deemed Disposal Adjustment`,
             data: data.deemedDisposalAdjustment,
+            borderWidth: 3
+        },{
+            label: `Total Contribution`,
+            data: data.totalContributions,
             borderWidth: 3
         }]
         },
@@ -105,12 +117,14 @@ function submit() {
     const interestAmounts = [];
     const deemedDisposalAdjustment = calculateDeemedDisposalOffset(initialInvestment, monthlyContribution, years, interestRate, interestAmounts);
     const amountAfterTax = calculateAmountAfterTax(interestAmounts, deemedDisposalAdjustment[deemedDisposalAdjustment.length - 1]);
+    const totalContributions = calculateTotalContributions(initialInvestment, monthlyContribution, years);
     document.getElementById('amountAfterTax').style.display='block';
     document.getElementById('amountAfterTax').innerHTML=`In ${years} years, you will have &euro;${formatNumber(amountAfterTax)} after tax`;
     const data = {
         endOfYearInterest,
         deemedDisposalAdjustment,
-        amountAfterTax
+        amountAfterTax,
+        totalContributions
     }
     loadChart(data);
 }
@@ -120,6 +134,7 @@ module.exports.formatNumber = formatNumber;
 module.exports.calculateCumulativeInterest = calculateCumulativeInterest;
 module.exports.calculateDeemedDisposalOffset = calculateDeemedDisposalOffset;
 module.exports.calculateAmountAfterTax = calculateAmountAfterTax;
+module.exports.calculateTotalContributions = calculateTotalContributions;
 module.exports.loadChart = loadChart;
 module.exports.submit = submit;
 
