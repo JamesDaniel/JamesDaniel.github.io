@@ -134,10 +134,33 @@ describe('Tests', function () {
         const actual = main.calculateTotalContributions(initialInvestment, monthlyContribution, years);
         assertArrayEqual(expected, actual)
     });
+    it('should get monthly contributions', function () {
+        monthlyContribution = 1000;
+        numOfYears = 5;
+        mortgageDuration = 4;
+        mortgageRepayments = 500;
+        const expected = [1000,1000,1000,1000,1500];
+        const actual = main.getMonthlyContributions(monthlyContribution, numOfYears, mortgageDuration, mortgageRepayments);
+        assertArrayEqual(expected, actual);
+    });
+    it('should get monthly contributions without mortgage details', function () {
+        monthlyContribution = 1000;
+        numOfYears = 5;
+        const expected = [1000,1000,1000,1000,1000];
+        const actual = main.getMonthlyContributions(monthlyContribution, numOfYears);
+        assertArrayEqual(expected, actual);
+    });
+    it('should get monthly contributions when there are no contributions', function () {
+        monthlyContribution = 0;
+        numOfYears = 5;
+        const expected = [0,0,0,0,0];
+        const actual = main.getMonthlyContributions(monthlyContribution, numOfYears);
+        assertArrayEqual(expected, actual);
+    });
     function assertArrayEqual(expected, actual) {
         assert.equal(expected.length, actual.length);
         for (let i=0; i<actual.length; i++) {
-            assert.equal(actual[i], expected[i])
+            assert.equal(actual[i], expected[i]);
         }
     }
 });

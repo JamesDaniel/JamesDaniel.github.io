@@ -4,7 +4,9 @@
   "description": "- <a href=\"https://jamesdaniel.github.io/\">https://jamesdaniel.github.io/</a>",
   "main": "index.js",
   "scripts": {
-    "build": "browserify js/main.js > js/bundle.js",
+    "build": "npm run build1 && npm run build2",
+    "build1": "browserify js/cumulative-interest.js --s module > dist/cumulative-interest.js",
+    "build2": "browserify js/mortgage.js --s module > dist/mortgage.js",
     "test": "mocha"
   },
   "repository": {

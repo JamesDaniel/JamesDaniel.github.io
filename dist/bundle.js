@@ -1,3 +1,4 @@
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.module = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 function getYearLabels(numOfYears) {
     const years = [];
     for (let i=0; i<numOfYears; i++) {
@@ -76,7 +77,7 @@ function calculateTotalContributions(initialInvestment, monthlyContribution, yea
     }
     return contributions;
 }
-function loadChart(data, labels) {
+function loadChart(data) {
     const ctx = document.getElementById('chart');
 
     const chart = Chart.getChart('chart');
@@ -84,11 +85,24 @@ function loadChart(data, labels) {
         chart.destroy();
     }
 
+    let labels = getYearLabels(data.endOfYearInterest.length);
     new Chart(ctx, {
         type: 'line',
         data: {
         labels: labels,
-        datasets: data
+        datasets: [{
+            label: `Future Value`,
+            data: data.endOfYearInterest,
+            borderWidth: 3
+        },{
+            label: `Deemed Disposal Adjustment`,
+            data: data.deemedDisposalAdjustment,
+            borderWidth: 3
+        },{
+            label: `Total Contribution`,
+            data: data.totalContributions,
+            borderWidth: 3
+        }]
         },
         options: {
             scales: {
@@ -110,6 +124,27 @@ function formatNumber(floatNum) {
     }
     return num;
 }
+function submit() {
+    document.getElementsByClassName('chart')[0].style.display='block';
+    const initialInvestment = parseFloat(document.getElementById('initialInvestment').value);
+    const monthlyContribution = parseFloat(document.getElementById('monthlyContribution').value);
+    const years = parseFloat(document.getElementById('years').value);
+    const interestRate = parseFloat(document.getElementById('interestRate').value);
+    const endOfYearInterest = calculateCumulativeInterest(initialInvestment, monthlyContribution, years, interestRate);
+    const interestAmounts = [];
+    const deemedDisposalAdjustment = calculateDeemedDisposalOffset(initialInvestment, monthlyContribution, years, interestRate, interestAmounts);
+    const amountAfterTax = calculateAmountAfterTax(interestAmounts, deemedDisposalAdjustment[deemedDisposalAdjustment.length - 1]);
+    const totalContributions = calculateTotalContributions(initialInvestment, monthlyContribution, years);
+    document.getElementById('amountAfterTax').style.display='block';
+    document.getElementById('amountAfterTax').innerHTML=`In ${years} years, you will have &euro;${formatNumber(amountAfterTax)} after tax`;
+    const data = {
+        endOfYearInterest,
+        deemedDisposalAdjustment,
+        amountAfterTax,
+        totalContributions
+    }
+    loadChart(data);
+}
 
 module.exports.getYearLabels = getYearLabels;
 module.exports.formatNumber = formatNumber;
@@ -119,3 +154,7 @@ module.exports.calculateAmountAfterTax = calculateAmountAfterTax;
 module.exports.calculateTotalContributions = calculateTotalContributions;
 module.exports.getMonthlyContributions = getMonthlyContributions;
 module.exports.loadChart = loadChart;
+module.exports.submit = submit;
+
+},{}]},{},[1])(1)
+});
