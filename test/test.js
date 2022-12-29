@@ -25,6 +25,7 @@ describe('Tests', function () {
         const initialInvestment = 1000;
         const monthlyContribution = 1200;
         const years = 17;
+        const monthlyContributions = main.getMonthlyContributions(monthlyContribution, years);
         const interestRate = 10;
         const actual = main.calculateCumulativeInterest(initialInvestment,monthlyContribution,years,interestRate);
         const expected = [
