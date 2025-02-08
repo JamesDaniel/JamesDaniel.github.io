@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ETF Cumulative Interest Calculator</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+        <link rel="stylesheet" href="css/main.css">
+    </head>
+    <body>
+        <noscript>
+            <div class="alert">
+                <strong>Warning!</strong> This website requires JavaScript to be enabled to work properly.
+            </div>
+        </noscript>
+        <div class="container">
+            <!-- Step 1 -->
+            <div class="row">
+                <div class="col-xs-12">
+                    <h3>Step 1: Initial Investment</h3>
+                </div>
+            </div>
+            <div class="row detail">
+                <div class="col-xs-6">
+                    <h4>Initial Investment</h4>
+                </div>
+                <div class="col-xs-6">
+                    <input id="initialInvestment" type="number"/>
+                </div>
+            </div>
+            <div class="row detail">
+                <div class="col-xs-6" style="padding-left: 0;">
+                    <p>Amount of money that you have available to invest initially.</p>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="row">
+                <div class="col-xs-12">
+                    <h3>Step 2: Contribute</h3>
+                </div>
+            </div>
+            <div class="row detail">
+                <div class="col-xs-6">
+                    <h4>Monthly Contribution</h4>
+                </div>
+                <div class="col-xs-6">
+                    <input id="monthlyContribution" type="number"/>
+                </div>
+            </div>
+            <div class="row detail">
+                <div class="col-xs-6" style="padding-left: 0;">
+                    <p>Amount that you plan to add to the principal every month, or a negative number for the amount that you plan to withdraw every month.</p>
+                </div>
+            </div>
+            <div class="row detail detail-padding">
+                <div class="col-xs-6">
+                    <h4>Length of Time in Years</h4>
+                </div>
+                <div class="col-xs-6">
+                    <input id="years" type="number"/>
+                </div>
+            </div>
+            <div class="row detail">
+                <div class="col-xs-6" style="padding-left: 0;">
+                    <p>Length of time, in years, that you plan to save.</p>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="row">
+                <div class="col-xs-12">
+                    <h3>Step 3: Interest Rate</h3>
+                </div>
+            </div>
+            <div class="row detail">
+                <div class="col-xs-6">
+                    <h4>Estimated Interest Rate</h4>
+                </div>
+                <div class="col-xs-6">
+                    <input id="interestRate" type="number"/>
+                </div>
+            </div>
+            <div class="row detail">
+                <div class="col-xs-6" style="padding-left: 0;">
+                    <p>Your estimated annual interest rate.</p>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="row detail detail-padding">
+                <div class="col-xs-12">
+                    <button id="submit" onclick="module.submit()">CALCULATE</button>
+                </div>
+            </div>
+            
+            <!-- Results -->
+            <div class="row">
+                <div class="col-xs-12">
+                    <h2 id="amountAfterTax"></h2>
+                </div>
+            </div>
+            <div class="chart">
+                <canvas id="chart"></canvas>
+            </div>
+        </div>
+
+        <script src="js/chart.js"></script>
+        <script src="dist/cumulative-interest.js"></script>
+    </body>
+</html>
