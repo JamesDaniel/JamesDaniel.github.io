@@ -1,0 +1,53 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<!-- Define the circular clipping mask -->
+<clipPath id="circle-clip">
+<circle cx="50" cy="50" r="50"/>
+</clipPath>
+
+<!-- Define a glow filter for the cyan elements -->
+<filter id="glow">
+  <!-- Blur the element itself to create the glow halo -->
+  <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur1" />
+  <feGaussianBlur in="SourceGraphic" stdDeviation="0.5" result="blur2" />
+  <!-- Merge the original graphic with the blurred versions -->
+  <feMerge>
+    <feMergeNode in="blur1"/>
+    <feMergeNode in="blur2"/>
+    <feMergeNode in="SourceGraphic"/>
+  </feMerge>
+</filter>
+
+</defs>
+
+<!-- Apply the clip path to everything inside this group -->
+
+<g clip-path="url(#circle-clip)">
+<!-- Dark, nearly black background -->
+<rect width="100" height="100" fill="#0c111c"/>
+
+<!-- Color variable for consistent styling. Increased stroke-width to 2 for clarity. -->
+<!-- The circular boundary is now handled by the clip-path, removing the need for a stroke frame. -->
+<g fill="none" stroke="#00ffff" stroke-width="2" filter="url(#glow)">
+
+  <!-- 1. Large, broken arc (representing data orbit/flow) -->
+  <path d="M 50 10 A 40 40 0 1 1 50 90" stroke-linecap="round" stroke-dasharray="8 4" stroke-opacity="0.6"/>
+
+  <!-- 2. Inner connection line (representing a circuit trace) -->
+  <path d="M 25 35 Q 50 20 75 35" stroke-opacity="0.8"/>
+  <path d="M 25 65 Q 50 80 75 65" stroke-opacity="0.8"/>
+
+  <!-- 3. Central node (radius increased from 3 to 4) -->
+  <circle cx="50" cy="50" r="4" fill="#00ffff" stroke="none"/>
+
+  <!-- 4. Peripheral nodes connected by faint lines (radius increased from 1.5 to 2) -->
+  <circle cx="25" cy="35" r="2" fill="#00ffff" stroke="none"/>
+  <circle cx="75" cy="35" r="2" fill="#00ffff" stroke="none"/>
+  <circle cx="25" cy="65" r="2" fill="#00ffff" stroke="none"/>
+  <circle cx="75" cy="65" r="2" fill="#00ffff" stroke="none"/>
+
+</g>
+
+</g>
+
+</svg>
