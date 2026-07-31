@@ -1,28 +1,27 @@
-# Website README
+# JamesDaniel.github.io
 
- - <a href="https://jamesdaniel.github.io/">https://jamesdaniel.github.io/</a>
+Personal website for James McGarr, Software Engineer.
 
-# Ideas for a blog
+Live at: https://jamesdaniel.github.io/
 
- - Idempotent explanation and example
- - Spring boot POST request result redirects
- - Debugging techniques
- - Race conditions
- - Unit tests vs integration tests vs functional tests
- - Performance testing
- - Depencency Vulnerability Checking
- - Maven dependency tree in Intellij
- - Fixing vulnerabilities
- - Class path loading issues and excluding dependencies
- - Git tricks
-  - replace file with file from different branch
-  - return file to previous point in time
-  - retrieve history from GitLab when local branch was deleted and removed branch was deleted
-  - retrieve history when changes were never committed but lost
-  - cherry file changes between branches
-  - rollback gitlab merge requested merge keeps the commit so you can't create the merge again. New commit(s) needed.
- - static code analysis with sonar
- - nodejs package json gotchas
- - jwt tokens
- - code style with intellij
- - Blocking commits with husky
+## Local Preview
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) installed
+
+### Steps
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Start a local server on port 3000:
+   ```bash
+   npx serve . -p 3000
+   ```
+
+3. Open your browser and navigate to [http://localhost:3000](http://localhost:3000).
+
+To stop the server, press `Ctrl+C` in the terminal.
