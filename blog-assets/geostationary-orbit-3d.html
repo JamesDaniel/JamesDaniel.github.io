@@ -1,0 +1,2185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space-Based Solar Power: Geostationary Orbit (GEO) 3D Simulator</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* Custom scrollbar and sleek styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.5); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.8); }
+    
+    .glass-panel {
+      background: rgba(10, 15, 30, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
+    }
+    
+    .glass-header {
+      background: rgba(8, 12, 24, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .pulse-glow {
+      animation: pulseGlow 2.5s infinite alternate ease-in-out;
+    }
+    
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+      100% { box-shadow: 0 0 25px rgba(0, 240, 255, 0.8), 0 0 45px rgba(16, 185, 129, 0.4); }
+    }
+
+    .slider-thumb::-webkit-slider-thumb {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans select-none overflow-hidden w-screen h-screen m-0 p-0 relative">
+
+  <!-- Main WebGL 3D Canvas -->
+  <canvas id="glcanvas" class="w-full h-full block absolute inset-0 z-0 cursor-grab active:cursor-grabbing"></canvas>
+
+  <!-- Top Navigation & View Presets Bar -->
+  <header class="absolute top-0 left-0 right-0 z-20 glass-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+    <!-- Branding & Title -->
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center shadow-md shadow-cyan-500/30">
+        <svg class="w-5 h-5 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm md:text-base font-bold text-white tracking-wide flex items-center gap-1.5">
+            Space-Based Solar Power <span class="text-cyan-400 font-mono text-xs px-2 py-0.5 rounded bg-cyan-950/70 border border-cyan-800/60">GEO SIMULATOR</span>
+          </h1>
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-ping"></span> 60 FPS
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-400 hidden sm:block">
+          Geostationary Orbit Mechanics: Earth spin, heliocentric orbit, and continuous wireless energy transmission
+        </p>
+      </div>
+    </div>
+
+    <!-- View Mode Switcher -->
+    <div class="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+      <button id="view-geo" class="view-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 shadow-sm transition-all duration-200 flex items-center gap-1.5" data-view="geo">
+        <span>🌍</span> <span class="hidden md:inline">Earth & GEO Lock</span>
+      </button>
+      <button id="view-heliocentric" class="view-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-1.5" data-view="heliocentric">
+        <span>☀️</span> <span class="hidden md:inline">Sun-Earth Orbit</span>
+      </button>
+      <button id="view-ground" class="view-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-1.5" data-view="ground">
+        <span>📡</span> <span class="hidden md:inline">Ground Rectenna POV</span>
+      </button>
+      <button id="view-satellite" class="view-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-1.5" data-view="satellite">
+        <span>🛰️</span> <span class="hidden md:inline">Satellite Crosshairs</span>
+      </button>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="flex items-center gap-2">
+      <button id="btn-open-guide" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white shadow-md shadow-cyan-500/20 flex items-center gap-1.5 transition-all">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+        <span>Blog Reference Guide</span>
+      </button>
+      <button id="btn-reset-cam" title="Reset Camera View" class="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Floating Left Panel: Orbit & Simulation Controls -->
+  <aside id="left-panel" class="absolute top-16 left-3 z-20 glass-panel rounded-xl p-3.5 w-72 max-w-[calc(100vw-24px)] flex flex-col gap-3 transition-all duration-300 max-h-[calc(100vh-80px)] overflow-y-auto">
+    
+    <!-- Time Playback Controls -->
+    <div class="border-b border-slate-800/80 pb-3">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Simulation Time
+        </span>
+        <span id="speed-display" class="text-[11px] font-mono text-cyan-400 font-semibold bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/40">
+          1.0 hr/sec
+        </span>
+      </div>
+
+      <div class="flex items-center gap-1.5 mb-2.5">
+        <button id="btn-play-pause" class="flex-1 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm">
+          <svg id="icon-pause" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+          </svg>
+          <svg id="icon-play" class="w-3.5 h-3.5 hidden" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <span id="play-text">Pause</span>
+        </button>
+        <button id="btn-step-h" title="Step forward 1 hour" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-all">
+          +1h
+        </button>
+        <button id="btn-step-d" title="Step forward 1 day" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-all">
+          +1d
+        </button>
+      </div>
+
+      <!-- Time Speed Slider -->
+      <div>
+        <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+          <span>Realtime (0.1h/s)</span>
+          <span>Fast (24h/s)</span>
+        </div>
+        <input id="time-speed-slider" type="range" min="0.1" max="24" step="0.1" value="1.0" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer slider-thumb accent-cyan-400">
+      </div>
+    </div>
+
+    <!-- Seasons / Orbital Events Jump Buttons -->
+    <div class="border-b border-slate-800/80 pb-3">
+      <div class="text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+        <span>Orbital Seasons</span>
+        <span class="text-[10px] text-slate-400 font-normal">Tilt: 23.44°</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="80">
+          <div class="font-medium text-emerald-400">Spring Equinox</div>
+          <div class="text-[9px] text-amber-300/90">⚠️ Umbra Eclipse</div>
+        </button>
+        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="172">
+          <div class="font-medium text-amber-400">Summer Solstice</div>
+          <div class="text-[9px] text-emerald-400">☀️ 24/7 Full Sun</div>
+        </button>
+        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="266">
+          <div class="font-medium text-emerald-400">Autumn Equinox</div>
+          <div class="text-[9px] text-amber-300/90">⚠️ Umbra Eclipse</div>
+        </button>
+        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="355">
+          <div class="font-medium text-cyan-400">Winter Solstice</div>
+          <div class="text-[9px] text-emerald-400">☀️ 24/7 Full Sun</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Visual Graphic Layers -->
+    <div>
+      <div class="text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-2">
+        Visual Layers
+      </div>
+      <div class="space-y-1.5 text-xs">
+        <label class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 hover:bg-slate-900 cursor-pointer transition-all">
+          <span class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow shadow-cyan-400/80 animate-pulse"></span>
+            <span>Microwave Energy Beam</span>
+          </span>
+          <input id="layer-beam" type="checkbox" checked class="rounded border-slate-700 text-cyan-500 focus:ring-0 focus:ring-offset-0 bg-slate-800">
+        </label>
+
+        <label class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 hover:bg-slate-900 cursor-pointer transition-all">
+          <span class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow shadow-indigo-500/80"></span>
+            <span>Earth Shadow Cone (Umbra)</span>
+          </span>
+          <input id="layer-shadow" type="checkbox" checked class="rounded border-slate-700 text-indigo-500 focus:ring-0 focus:ring-offset-0 bg-slate-800">
+        </label>
+
+        <label class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 hover:bg-slate-900 cursor-pointer transition-all">
+          <span class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+            <span>GEO Orbit Belt (35,786 km)</span>
+          </span>
+          <input id="layer-georing" type="checkbox" checked class="rounded border-slate-700 text-amber-500 focus:ring-0 focus:ring-offset-0 bg-slate-800">
+        </label>
+
+        <label class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 hover:bg-slate-900 cursor-pointer transition-all">
+          <span class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <span>Equator & Ground Target</span>
+          </span>
+          <input id="layer-equator" type="checkbox" checked class="rounded border-slate-700 text-emerald-500 focus:ring-0 focus:ring-offset-0 bg-slate-800">
+        </label>
+
+        <label class="flex items-center justify-between p-1.5 rounded bg-slate-900/60 hover:bg-slate-900 cursor-pointer transition-all">
+          <span class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-yellow-300"></span>
+            <span>Sun Radiation Flux Rays</span>
+          </span>
+          <input id="layer-sunrays" type="checkbox" checked class="rounded border-slate-700 text-yellow-500 focus:ring-0 focus:ring-offset-0 bg-slate-800">
+        </label>
+      </div>
+    </div>
+
+    <!-- Mouse Interaction Hints -->
+    <div class="mt-1 pt-2 border-t border-slate-800/80 text-[10px] text-slate-400 flex items-center justify-between">
+      <span>🖱️ Left-Drag: Rotate</span>
+      <span>📜 Scroll: Zoom</span>
+      <span>🖱️ Right: Pan</span>
+    </div>
+  </aside>
+
+  <!-- Floating Right Panel: Live Scientific Telemetry & Orbit Math -->
+  <aside id="right-panel" class="absolute top-16 right-3 z-20 glass-panel rounded-xl p-3.5 w-80 max-w-[calc(100vw-24px)] flex flex-col gap-3 transition-all duration-300 max-h-[calc(100vh-80px)] overflow-y-auto">
+    
+    <!-- Status Highlight Banner -->
+    <div id="status-banner" class="rounded-lg p-2.5 bg-gradient-to-r from-cyan-950/80 to-emerald-950/80 border border-cyan-500/40">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] font-bold tracking-wider text-cyan-300 uppercase">Power Transmission Status</span>
+        <span id="beam-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+      </div>
+      <div id="beam-status-text" class="text-xs font-semibold text-emerald-300 mt-1 flex items-center gap-1.5">
+        ⚡ 2.0 GW Microwave Link Active (99.8% Lock)
+      </div>
+      <div id="illumination-status" class="text-[11px] text-slate-300 mt-0.5">
+        ☀️ Satellite in Full Sunlight (1,361 W/m²)
+      </div>
+    </div>
+
+    <!-- Orbital Mechanics Specs -->
+    <div class="border-b border-slate-800/80 pb-3">
+      <div class="text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+        <span>Geostationary Parameters</span>
+        <span class="text-[10px] text-cyan-400 font-mono">Keplerian Orbit</span>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div class="bg-slate-900/70 p-2 rounded border border-slate-800">
+          <div class="text-[10px] text-slate-400">Orbital Altitude</div>
+          <div class="font-mono font-bold text-cyan-300">35,786 km</div>
+          <div class="text-[9px] text-slate-500">22,236 miles (h)</div>
+        </div>
+        <div class="bg-slate-900/70 p-2 rounded border border-slate-800">
+          <div class="text-[10px] text-slate-400">Orbital Radius (a)</div>
+          <div class="font-mono font-bold text-slate-200">42,164 km</div>
+          <div class="text-[9px] text-slate-500">6.61 × Earth Radii</div>
+        </div>
+        <div class="bg-slate-900/70 p-2 rounded border border-slate-800">
+          <div class="text-[10px] text-slate-400">Orbital Velocity</div>
+          <div class="font-mono font-bold text-emerald-300">3.074 km/s</div>
+          <div class="text-[9px] text-slate-500">11,068 km/h</div>
+        </div>
+        <div class="bg-slate-900/70 p-2 rounded border border-slate-800">
+          <div class="text-[10px] text-slate-400">Period (1 Sidereal Day)</div>
+          <div class="font-mono font-bold text-amber-300">23h 56m 04s</div>
+          <div class="text-[9px] text-slate-500">Matches Earth Spin</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Power & Energy Transmission Flow -->
+    <div class="border-b border-slate-800/80 pb-3">
+      <div class="text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+        <span>Wireless Energy Budget</span>
+        <span class="text-[10px] text-emerald-400 font-mono">2.45 GHz Beam</span>
+      </div>
+      
+      <div class="space-y-1.5 text-xs">
+        <div class="flex items-center justify-between py-1 border-b border-slate-900">
+          <span class="text-slate-400">Space Solar Array Gen:</span>
+          <span class="font-mono font-bold text-yellow-300">2.00 GW</span>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-slate-900">
+          <span class="text-slate-400">Atmospheric Absorption Loss:</span>
+          <span class="font-mono text-emerald-400">&lt; 2.0% (Rain/Cloud Safe)</span>
+        </div>
+        <div class="flex items-center justify-between py-1 border-b border-slate-900">
+          <span class="text-slate-400">Ground Rectenna Capture:</span>
+          <span class="font-mono font-bold text-cyan-300">1.64 GW (82%)</span>
+        </div>
+        <div class="flex items-center justify-between py-1">
+          <span class="text-slate-400">Power Factor vs Terrestrial:</span>
+          <span class="font-mono text-emerald-300 font-bold">5.2× Higher Output</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Clocks & Local Geometry -->
+    <div>
+      <div class="text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-2">
+        Local Coordinates & Time
+      </div>
+      
+      <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 space-y-1 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">Rectenna Local Time:</span>
+          <span id="clock-display" class="font-mono font-bold text-cyan-300">12:00:00 (Noon)</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">Sub-Satellite Longitude:</span>
+          <span class="font-mono text-slate-200">0.00° (Greenwich Meridian)</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">Day of Year:</span>
+          <span id="day-display" class="font-mono text-amber-300">Day 80 (Equinox)</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-slate-400">Beam Elevation Angle:</span>
+          <span class="font-mono text-emerald-400 font-bold">90.0° (Direct Zenith)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collapse / Expand toggle button for mobile -->
+    <div class="text-center">
+      <button id="btn-toggle-panels" class="text-[10px] text-slate-500 hover:text-slate-300">
+        Click here to minimize telemetry
+      </button>
+    </div>
+  </aside>
+
+  <!-- Bottom Floating Callout: Core Insight Bar -->
+  <div id="bottom-insight" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 glass-panel rounded-full px-5 py-2 flex items-center gap-3 max-w-[90vw] text-xs shadow-xl border border-cyan-500/30">
+    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+    <p id="dynamic-insight-text" class="text-slate-200 truncate sm:whitespace-normal">
+      <strong class="text-cyan-300">Key Takeaway:</strong> In GEO (35,786 km), the satellite completes 1 orbit per day, hovering perpetually over the ground rectenna while bathing in continuous sunlight!
+    </p>
+    <button id="btn-next-insight" class="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold underline whitespace-nowrap">
+      Next Insight →
+    </button>
+  </div>
+
+  <!-- Educational Blog Reference Guide Modal -->
+  <div id="guide-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-3xl max-h-[90vh] rounded-2xl border border-cyan-500/40 flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-white">Space-Based Solar Power & GEO: Blog Reference Guide</h2>
+            <p class="text-xs text-slate-400">Everything you need to write an authoritative, compelling blog post on space solar</p>
+          </div>
+        </div>
+        <button id="btn-close-guide" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Tabs -->
+      <div class="flex border-b border-slate-800 bg-slate-900/50 px-4 text-xs font-semibold">
+        <button class="modal-tab px-4 py-2.5 border-b-2 border-cyan-400 text-cyan-400" data-tab="tab-geo">1. Why Geostationary Orbit?</button>
+        <button class="modal-tab px-4 py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200" data-tab="tab-sun">2. Earth-Sun Dynamics & Eclipses</button>
+        <button class="modal-tab px-4 py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200" data-tab="tab-beaming">3. Wireless Energy Beaming</button>
+        <button class="modal-tab px-4 py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200" data-tab="tab-blog">4. Blog Cheat Sheet & Quotes</button>
+      </div>
+
+      <!-- Modal Body Content (Scrollable) -->
+      <div class="p-5 overflow-y-auto space-y-4 text-xs text-slate-300 leading-relaxed">
+        
+        <!-- Tab 1: Why Geostationary Orbit? -->
+        <div id="tab-geo" class="tab-content space-y-3">
+          <div class="bg-cyan-950/40 p-3 rounded-xl border border-cyan-800/40">
+            <h3 class="text-sm font-bold text-cyan-300 mb-1">What is Geostationary Orbit (GEO)?</h3>
+            <p>
+              A geostationary orbit is a circular, equatorial orbit at an exact altitude of <strong>35,786 km (22,236 miles)</strong> above the Earth. At this precise distance, orbital mechanics dictated by Kepler's Third Law produce an orbital period of exactly <strong>23 hours, 56 minutes, and 4 seconds</strong> (one sidereal day).
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+              <h4 class="font-bold text-amber-300 mb-1">Why GEO is Crucial for Space Solar Power</h4>
+              <ul class="list-disc list-inside space-y-1 text-slate-300">
+                <li><strong>Permanent Ground Lock:</strong> Because the satellite rotates at the exact same angular rate as Earth, it stays fixed above the same longitude.</li>
+                <li><strong>No Moving Dishes:</strong> The receiving ground station (rectenna) points at a stationary point in the sky—no expensive tracking steering required!</li>
+                <li><strong>Continuous Baseload Power:</strong> Unlike Low Earth Orbit (LEO) where a satellite passes overhead in minutes, a GEO satellite beams steady power 24/7 without constellation handoffs.</li>
+              </ul>
+            </div>
+            
+            <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+              <h4 class="font-bold text-emerald-300 mb-1">The Exact Mathematics</h4>
+              <p class="font-mono text-[11px] bg-slate-950 p-2 rounded text-slate-300 mb-2 border border-slate-800">
+                r = [ (G · M · T²) / (4π²) ]^(1/3) = 42,164 km<br>
+                Altitude h = r - R_earth = 35,786 km<br>
+                Velocity v = √(G · M / r) = 3.074 km/s
+              </p>
+              <p class="text-[11px] text-slate-400">
+                If the satellite were higher, it would lag behind Earth; if lower, it would outrace Earth. 35,786 km is the sweet spot.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Earth-Sun Dynamics & Eclipses -->
+        <div id="tab-sun" class="tab-content space-y-3 hidden">
+          <div class="bg-amber-950/30 p-3 rounded-xl border border-amber-800/40">
+            <h3 class="text-sm font-bold text-amber-300 mb-1">The 99% Continuous Sunlight Advantage</h3>
+            <p>
+              On Earth's surface, solar panels only work ~8 to 12 hours a day and are halted by night, clouds, and atmospheric scattering (typical capacity factor is only 15%–25%). In GEO, the satellite is high enough in space to receive pure extraterrestrial solar irradiance of <strong>1,361 W/m²</strong> uninterrupted over 99% of the year.
+            </p>
+          </div>
+
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+            <h4 class="font-bold text-cyan-300 mb-1.5">Why Doesn't Earth's Shadow Block the Satellite?</h4>
+            <p class="mb-2">
+              Earth's rotational axis is tilted by <strong>23.44°</strong> relative to its orbital plane around the Sun. Because the GEO orbit lies strictly on the equatorial plane:
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+              <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+                <span class="text-amber-400 font-bold">During Solstices (Summer & Winter):</span><br>
+                Earth's shadow cone points above or below the equatorial GEO ring. The satellite flies completely clear of Earth's shadow, experiencing <strong>zero night</strong>!
+              </div>
+              <div class="bg-slate-950 p-2.5 rounded border border-slate-800">
+                <span class="text-emerald-400 font-bold">During Equinoxes (Spring & Autumn):</span><br>
+                The Sun crosses the equatorial plane. For a ~44-day window twice a year, the satellite enters Earth's umbra shadow around midnight for at most <strong>72 minutes</strong>. Simple onboard thermal batteries or interconnected ground grids bridge this brief window.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Wireless Energy Beaming -->
+        <div id="tab-beaming" class="tab-content space-y-3 hidden">
+          <div class="bg-emerald-950/40 p-3 rounded-xl border border-emerald-800/40">
+            <h3 class="text-sm font-bold text-emerald-300 mb-1">How Energy Beams from Space to Earth</h3>
+            <p>
+              Space solar power uses <strong>retrodirective phased-array microwave beams</strong> (typically at 2.45 GHz or 5.8 GHz ISM bands). Microwave radiation at these frequencies passes straight through rain, thick cloud cover, and smog with less than 2% atmospheric absorption loss.
+            </p>
+          </div>
+
+          <div class="space-y-2">
+            <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+              <h4 class="font-bold text-slate-100 mb-1">The 4-Step Transmission Chain:</h4>
+              <ol class="list-decimal list-inside space-y-1 text-slate-300">
+                <li><strong>Photovoltaic Conversion:</strong> High-efficiency space solar cells convert sunlight to DC electricity at 30%–40% efficiency.</li>
+                <li><strong>Microwave RF Generation:</strong> Solid-state RF power amplifiers (GaN) convert DC to a coherent microwave beam.</li>
+                <li><strong>Directional Phased-Array Transmission:</strong> A 1 km wide antenna transmitter focuses the microwave beam tightly onto the ground target.</li>
+                <li><strong>Ground Rectenna Conversion:</strong> A receiving antenna mesh ("rectenna") made of simple dipole antennas and Schottky diodes rectifies microwaves back into standard grid DC electricity at 85%+ efficiency.</li>
+              </ol>
+            </div>
+
+            <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+              <h4 class="font-bold text-amber-300 mb-1">Safety & Environmental Footprint</h4>
+              <p class="text-[11px] text-slate-300">
+                Unlike ionizing radiation (X-rays, gamma), microwaves are <strong>non-ionizing</strong>. The peak beam intensity at ground center is engineered to be ~240 W/m²—roughly 1/4 the intensity of natural midday sunlight! Birds flying through the beam or airplanes passing across experience no harm. Furthermore, the ground rectenna is transparent mesh, allowing 80% of sunlight through so farming or sheep grazing can continue underneath!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Blog Cheat Sheet & Quotes -->
+        <div id="tab-blog" class="tab-content space-y-3 hidden">
+          <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
+            <h3 class="text-sm font-bold text-cyan-300 mb-2">Punchy Quotes & Concepts for Your Blog Post</h3>
+            
+            <div class="space-y-2.5">
+              <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-[11px]">
+                <strong class="text-amber-400">The Baseload Problem Solved:</strong>
+                <p class="italic text-slate-300 mt-0.5">
+                  "Terrestrial solar has an undeniable flaw: the Sun sets every evening, and clouds steal power by day. Space-based solar power in geostationary orbit eliminates intermittency, delivering true 24/7 zero-carbon baseload energy directly into the power grid."
+                </p>
+              </div>
+
+              <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-[11px]">
+                <strong class="text-cyan-400">Why the 35,786 km Distance Matters:</strong>
+                <p class="italic text-slate-300 mt-0.5">
+                  "At 35,786 kilometers above the equator, orbital velocity exactly cancels Earth's rotation. To a ground station, the power satellite never moves. It hangs like an eternal sunbeam anchored in the sky."
+                </p>
+              </div>
+
+              <div class="bg-slate-950 p-2.5 rounded border border-slate-800 text-[11px]">
+                <strong class="text-emerald-400">Terrestrial vs Space Solar Comparison:</strong>
+                <div class="mt-1.5 grid grid-cols-3 gap-1 text-[10px] text-center">
+                  <div class="bg-slate-900 p-1.5 rounded">
+                    <div class="text-slate-400">Solar Flux</div>
+                    <div class="font-bold text-slate-200">1,361 W/m² (AM0)</div>
+                  </div>
+                  <div class="bg-slate-900 p-1.5 rounded">
+                    <div class="text-slate-400">Capacity Factor</div>
+                    <div class="font-bold text-emerald-400">&gt; 99% vs ~20%</div>
+                  </div>
+                  <div class="bg-slate-900 p-1.5 rounded">
+                    <div class="text-slate-400">Storage Needed</div>
+                    <div class="font-bold text-cyan-400">Zero Grid Batteries</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3 border-t border-slate-800 flex items-center justify-between bg-slate-900/80">
+        <span class="text-[11px] text-slate-400">Use interactive 3D controls to demonstrate these points</span>
+        <button id="btn-close-guide-footer" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all">
+          Close Guide
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript 3D Engine & Interactive Logic -->
+  <script>
+    /* --- Matrix Math Utility (Minimal high-performance vector & matrix library) --- */
+    const Mat4 = {
+      create: () => new Float32Array([
+        1,0,0,0,
+        0,1,0,0,
+        0,0,1,0,
+        0,0,0,1
+      ]),
+      identity: (out) => {
+        for (let i = 0; i < 16; i++) out[i] = (i % 5 === 0) ? 1 : 0;
+        return out;
+      },
+      perspective: (out, fovy, aspect, near, far) => {
+        const f = 1.0 / Math.tan(fovy / 2);
+        const nf = 1 / (near - far);
+        out[0] = f / aspect; out[1] = 0; out[2] = 0; out[3] = 0;
+        out[4] = 0; out[5] = f; out[6] = 0; out[7] = 0;
+        out[8] = 0; out[9] = 0; out[10] = (far + near) * nf; out[11] = -1;
+        out[12] = 0; out[13] = 0; out[14] = (2 * far * near) * nf; out[15] = 0;
+        return out;
+      },
+      lookAt: (out, eye, center, up) => {
+        let x0, x1, x2, y0, y1, y2, z0, z1, z2, len;
+        let eyex = eye[0], eyey = eye[1], eyez = eye[2];
+        let upx = up[0], upy = up[1], upz = up[2];
+        let centerx = center[0], centery = center[1], centerz = center[2];
+
+        z0 = eyex - centerx; z1 = eyey - centery; z2 = eyez - centerz;
+        len = 1 / Math.hypot(z0, z1, z2);
+        z0 *= len; z1 *= len; z2 *= len;
+
+        x0 = upy * z2 - upz * z1;
+        x1 = upz * z0 - upx * z2;
+        x2 = upx * z1 - upy * z0;
+        len = 1 / Math.hypot(x0, x1, x2);
+        x0 *= len; x1 *= len; x2 *= len;
+
+        y0 = z1 * x2 - z2 * x1;
+        y1 = z2 * x0 - z0 * x2;
+        y2 = z0 * x1 - z1 * x0;
+        len = 1 / Math.hypot(y0, y1, y2);
+        y0 *= len; y1 *= len; y2 *= len;
+
+        out[0] = x0; out[1] = y0; out[2] = z0; out[3] = 0;
+        out[4] = x1; out[5] = y1; out[6] = z1; out[7] = 0;
+        out[8] = x2; out[9] = y2; out[10] = z2; out[11] = 0;
+        out[12] = -(x0 * eyex + x1 * eyey + x2 * eyez);
+        out[13] = -(y0 * eyex + y1 * eyey + y2 * eyez);
+        out[14] = -(z0 * eyex + z1 * eyey + z2 * eyez);
+        out[15] = 1;
+        return out;
+      },
+      multiply: (out, a, b) => {
+        const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+        const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+        const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+        const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+        let b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+        out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+        out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+        out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+        out[3] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+        b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7];
+        out[4] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+        out[5] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+        out[6] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+        out[7] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+        b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11];
+        out[8] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+        out[9] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+        out[10] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+        out[11] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+        b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15];
+        out[12] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+        out[13] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+        out[14] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+        out[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+        return out;
+      },
+      translate: (out, a, v) => {
+        const x = v[0], y = v[1], z = v[2];
+        if (a === out) {
+          out[12] = a[0]*x + a[4]*y + a[8]*z + a[12];
+          out[13] = a[1]*x + a[5]*y + a[9]*z + a[13];
+          out[14] = a[2]*x + a[6]*y + a[10]*z + a[14];
+          out[15] = a[3]*x + a[7]*y + a[11]*z + a[15];
+        } else {
+          Mat4.identity(out);
+          out[12] = x; out[13] = y; out[14] = z;
+          Mat4.multiply(out, a, out);
+        }
+        return out;
+      },
+      rotateX: (out, a, rad) => {
+        const s = Math.sin(rad), c = Math.cos(rad);
+        const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+        const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+        if (a !== out) {
+          out[0] = a[0]; out[1] = a[1]; out[2] = a[2]; out[3] = a[3];
+          out[12] = a[12]; out[13] = a[13]; out[14] = a[14]; out[15] = a[15];
+        }
+        out[4] = a10 * c + a20 * s;
+        out[5] = a11 * c + a21 * s;
+        out[6] = a12 * c + a22 * s;
+        out[7] = a13 * c + a23 * s;
+        out[8] = a20 * c - a10 * s;
+        out[9] = a21 * c - a11 * s;
+        out[10] = a22 * c - a12 * s;
+        out[11] = a23 * c - a13 * s;
+        return out;
+      },
+      rotateY: (out, a, rad) => {
+        const s = Math.sin(rad), c = Math.cos(rad);
+        const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+        const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+        if (a !== out) {
+          out[4] = a[4]; out[5] = a[5]; out[6] = a[6]; out[7] = a[7];
+          out[12] = a[12]; out[13] = a[13]; out[14] = a[14]; out[15] = a[15];
+        }
+        out[0] = a00 * c - a20 * s;
+        out[1] = a01 * c - a21 * s;
+        out[2] = a02 * c - a22 * s;
+        out[3] = a03 * c - a23 * s;
+        out[8] = a00 * s + a20 * c;
+        out[9] = a01 * s + a21 * c;
+        out[10] = a02 * s + a22 * c;
+        out[11] = a03 * s + a23 * c;
+        return out;
+      },
+      rotateZ: (out, a, rad) => {
+        const s = Math.sin(rad), c = Math.cos(rad);
+        const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+        const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+        if (a !== out) {
+          out[8] = a[8]; out[9] = a[9]; out[10] = a[10]; out[11] = a[11];
+          out[12] = a[12]; out[13] = a[13]; out[14] = a[14]; out[15] = a[15];
+        }
+        out[0] = a00 * c + a10 * s;
+        out[1] = a01 * c + a11 * s;
+        out[2] = a02 * c + a12 * s;
+        out[3] = a03 * c + a13 * s;
+        out[4] = a10 * c - a00 * s;
+        out[5] = a11 * c - a01 * s;
+        out[6] = a12 * c - a02 * s;
+        out[7] = a13 * c - a03 * s;
+        return out;
+      },
+      scale: (out, a, v) => {
+        const x = v[0], y = v[1], z = v[2];
+        out[0] = a[0] * x; out[1] = a[1] * x; out[2] = a[2] * x; out[3] = a[3] * x;
+        out[4] = a[4] * y; out[5] = a[5] * y; out[6] = a[6] * y; out[7] = a[7] * y;
+        out[8] = a[8] * z; out[9] = a[9] * z; out[10] = a[10] * z; out[11] = a[11] * z;
+        out[12] = a[12]; out[13] = a[13]; out[14] = a[14]; out[15] = a[15];
+        return out;
+      }
+    };
+
+    const Vec3 = {
+      create: (x=0, y=0, z=0) => new Float32Array([x, y, z]),
+      set: (out, x, y, z) => { out[0]=x; out[1]=y; out[2]=z; return out; },
+      normalize: (out, a) => {
+        let len = Math.hypot(a[0], a[1], a[2]);
+        if (len > 0) { len = 1 / len; out[0] = a[0] * len; out[1] = a[1] * len; out[2] = a[2] * len; }
+        return out;
+      },
+      dot: (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2],
+      lerp: (out, a, b, t) => {
+        out[0] = a[0] + t * (b[0] - a[0]);
+        out[1] = a[1] + t * (b[1] - a[1]);
+        out[2] = a[2] + t * (b[2] - a[2]);
+        return out;
+      }
+    };
+
+    /* --- Procedural Earth Texture Generator --- */
+    function generateEarthTextures() {
+      // 1. Daytime Earth Texture
+      const dayCanvas = document.createElement('canvas');
+      dayCanvas.width = 2048;
+      dayCanvas.height = 1024;
+      const dctx = dayCanvas.getContext('2d');
+
+      // Ocean gradient background
+      const oceanGrad = dctx.createLinearGradient(0, 0, 0, 1024);
+      oceanGrad.addColorStop(0, '#0a1d37');
+      oceanGrad.addColorStop(0.5, '#0f2b48');
+      oceanGrad.addColorStop(1, '#0a1d37');
+      dctx.fillStyle = oceanGrad;
+      dctx.fillRect(0, 0, 2048, 1024);
+
+      // Helper function to map lon/lat to canvas X/Y
+      const toXY = (lon, lat) => [(lon + 180) / 360 * 2048, (90 - lat) / 180 * 1024];
+
+      // Continent polygon definitions
+      const continents = {
+        northAmerica: [
+          [-168, 65], [-160, 71], [-140, 70], [-130, 69], [-120, 69], [-100, 70],
+          [-90, 68], [-80, 64], [-82, 55], [-75, 50], [-60, 52], [-55, 47],
+          [-65, 44], [-70, 42], [-75, 35], [-80, 25], [-81, 25], [-87, 30],
+          [-97, 26], [-97, 21], [-88, 16], [-83, 9], [-77, 8], [-80, 9],
+          [-85, 13], [-96, 16], [-105, 20], [-105, 23], [-110, 23], [-111, 30],
+          [-115, 30], [-117, 32], [-124, 38], [-124, 48], [-130, 54], [-137, 58],
+          [-148, 60], [-160, 58], [-165, 60]
+        ],
+        southAmerica: [
+          [-77, 8], [-72, 11], [-60, 10], [-50, 0], [-35, -5], [-35, -9],
+          [-39, -15], [-42, -23], [-48, -28], [-53, -33], [-60, -38], [-65, -45],
+          [-67, -54], [-71, -55], [-75, -50], [-73, -42], [-72, -30], [-70, -20],
+          [-77, -10], [-81, -5], [-80, 1]
+        ],
+        europe: [
+          [-10, 36], [-8, 43], [-1, 44], [-4, 48], [1, 50], [9, 54],
+          [8, 58], [10, 60], [12, 63], [14, 68], [24, 71], [30, 70],
+          [40, 67], [50, 65], [60, 68], [60, 55], [50, 50], [40, 45],
+          [30, 45], [28, 41], [23, 38], [18, 40], [15, 38], [12, 44],
+          [8, 44], [3, 42], [-3, 37]
+        ],
+        africa: [
+          [-10, 36], [0, 36], [10, 37], [25, 32], [32, 31], [35, 28],
+          [43, 13], [51, 12], [45, 2], [40, -5], [36, -15], [33, -25],
+          [30, -30], [26, -34], [18, -34], [15, -28], [12, -18], [12, -5],
+          [9, 4], [3, 6], [-5, 5], [-12, 8], [-17, 15], [-17, 21],
+          [-13, 28], [-6, 35]
+        ],
+        asia: [
+          [30, 45], [40, 45], [50, 50], [60, 55], [60, 68], [75, 73],
+          [105, 77], [135, 72], [170, 68], [180, 65], [170, 60], [160, 55],
+          [155, 50], [140, 52], [135, 45], [130, 42], [125, 40], [120, 35],
+          [122, 30], [118, 25], [108, 22], [106, 11], [100, 7], [98, 15],
+          [92, 22], [88, 22], [80, 15], [77, 8], [73, 18], [68, 24],
+          [60, 25], [56, 26], [50, 27], [45, 13], [35, 28], [36, 35]
+        ],
+        australia: [
+          [114, -22], [115, -34], [120, -35], [130, -32], [138, -35], [147, -38],
+          [151, -34], [153, -28], [150, -22], [145, -15], [142, -11], [136, -12],
+          [130, -15], [125, -14], [122, -18]
+        ],
+        greenland: [
+          [-50, 60], [-40, 65], [-30, 70], [-20, 76], [-25, 82], [-45, 83],
+          [-60, 80], [-55, 70]
+        ],
+        antarctica: [
+          [-180, -72], [-140, -75], [-100, -70], [-60, -64], [-30, -70],
+          [0, -68], [40, -66], [80, -65], [120, -66], [150, -68],
+          [180, -72], [180, -90], [-180, -90]
+        ]
+      };
+
+      // Draw Landmasses with lush biomes and desert tones
+      function drawPolygon(pts, fillStyle, strokeStyle = '#1b4d3e') {
+        dctx.beginPath();
+        pts.forEach((p, i) => {
+          const [x, y] = toXY(p[0], p[1]);
+          if (i === 0) dctx.moveTo(x, y); else dctx.lineTo(x, y);
+        });
+        dctx.closePath();
+        dctx.fillStyle = fillStyle;
+        dctx.fill();
+        if (strokeStyle) {
+          dctx.strokeStyle = strokeStyle;
+          dctx.lineWidth = 1.5;
+          dctx.stroke();
+        }
+      }
+
+      // Draw Continents
+      drawPolygon(continents.northAmerica, '#2e6b3e');
+      drawPolygon(continents.southAmerica, '#1e5f32');
+      drawPolygon(continents.europe, '#357845');
+      drawPolygon(continents.africa, '#8c773e'); // African savanna/desert
+      drawPolygon(continents.asia, '#3d7249');
+      drawPolygon(continents.australia, '#9a7337'); // Outback ochre
+      drawPolygon(continents.greenland, '#e2ecf5', '#ccd9e8'); // Ice
+      drawPolygon(continents.antarctica, '#f1f5f9', '#d8e2ec'); // Ice cap
+
+      // Add Sahara and Arabian Deserts
+      dctx.beginPath();
+      const sahara = [[-15, 28], [35, 28], [40, 18], [10, 18], [-15, 20]];
+      sahara.forEach((p, i) => {
+        const [x, y] = toXY(p[0], p[1]);
+        if (i === 0) dctx.moveTo(x, y); else dctx.lineTo(x, y);
+      });
+      dctx.closePath();
+      dctx.fillStyle = '#bfa157';
+      dctx.fill();
+
+      // Atmospheric cloud wisps
+      dctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+      for (let i = 0; i < 40; i++) {
+        const cx = (i * 57) % 2048;
+        const cy = 200 + Math.sin(i * 1.7) * 280 + (i % 3) * 120;
+        const rw = 120 + (i % 5) * 40;
+        const rh = 18 + (i % 3) * 8;
+        dctx.beginPath();
+        dctx.ellipse(cx, cy, rw, rh, Math.sin(i) * 0.4, 0, Math.PI * 2);
+        dctx.fill();
+      }
+
+      // Grid lines: Equator (Gold) and Latitudes
+      dctx.strokeStyle = 'rgba(245, 158, 11, 0.85)'; // Gold equator
+      dctx.lineWidth = 3.5;
+      dctx.beginPath();
+      dctx.moveTo(0, 512);
+      dctx.lineTo(2048, 512);
+      dctx.stroke();
+
+      // Tropics
+      dctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      dctx.lineWidth = 1;
+      dctx.setLineDash([8, 8]);
+      const [_, yTropicCancer] = toXY(0, 23.44);
+      const [__, yTropicCap] = toXY(0, -23.44);
+      dctx.beginPath();
+      dctx.moveTo(0, yTropicCancer); dctx.lineTo(2048, yTropicCancer);
+      dctx.moveTo(0, yTropicCap); dctx.lineTo(2048, yTropicCap);
+      dctx.stroke();
+      dctx.setLineDash([]);
+
+      // Prime Meridian
+      dctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      dctx.beginPath();
+      dctx.moveTo(1024, 0);
+      dctx.lineTo(1024, 1024);
+      dctx.stroke();
+
+      // Ground Rectenna Target Station (at 0° Lat, 0° Lon)
+      const [rx, ry] = toXY(0, 0); // Equatorial Africa / Gulf of Guinea or Greenwich
+      dctx.beginPath();
+      dctx.arc(rx, ry, 14, 0, Math.PI * 2);
+      dctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
+      dctx.fill();
+      dctx.strokeStyle = '#00f0ff';
+      dctx.lineWidth = 2.5;
+      dctx.stroke();
+
+      dctx.beginPath();
+      dctx.arc(rx, ry, 6, 0, Math.PI * 2);
+      dctx.fillStyle = '#10b981';
+      dctx.fill();
+
+      // 2. Night Texture (City Lights & Rectenna Glow)
+      const nightCanvas = document.createElement('canvas');
+      nightCanvas.width = 2048;
+      nightCanvas.height = 1024;
+      const nctx = nightCanvas.getContext('2d');
+
+      nctx.fillStyle = '#020408'; // Pitch black oceans
+      nctx.fillRect(0, 0, 2048, 1024);
+
+      // Dark continent silhouettes
+      function drawNightLand(pts) {
+        nctx.beginPath();
+        pts.forEach((p, i) => {
+          const [x, y] = toXY(p[0], p[1]);
+          if (i === 0) nctx.moveTo(x, y); else nctx.lineTo(x, y);
+        });
+        nctx.closePath();
+        nctx.fillStyle = '#070c14';
+        nctx.fill();
+      }
+      Object.values(continents).forEach(pts => drawNightLand(pts));
+
+      // Urban cluster locations (lon, lat, size)
+      const cities = [
+        // North America
+        [-74, 40.7, 18], [-87.6, 41.8, 14], [-118.2, 34, 16], [-122.4, 37.7, 12],
+        [-95.3, 29.7, 12], [-80.2, 25.7, 10], [-79.4, 43.6, 11], [-99.1, 19.4, 15],
+        // Europe
+        [-0.1, 51.5, 17], [2.3, 48.8, 16], [13.4, 52.5, 14], [4.9, 52.3, 11],
+        [-3.7, 40.4, 12], [12.5, 41.9, 12], [21, 52.2, 11], [37.6, 55.7, 16],
+        // Asia
+        [139.7, 35.6, 24], [121.5, 31.2, 22], [116.4, 39.9, 20], [113.2, 23.1, 18],
+        [126.9, 37.5, 18], [72.8, 19, 20], [77.2, 28.6, 20], [88.3, 22.5, 15],
+        [100.5, 13.7, 14], [103.8, 1.3, 13], [106.8, -6.2, 15],
+        // South America
+        [-46.6, -23.5, 18], [-43.2, -22.9, 15], [-58.4, -34.6, 14],
+        // Africa & Middle East
+        [31.2, 30, 16], [55.3, 25.2, 14], [46.7, 24.7, 12], [28, -26.2, 12],
+        // Australia
+        [151.2, -33.8, 13], [144.9, -37.8, 12]
+      ];
+
+      cities.forEach(([lon, lat, size]) => {
+        const [cx, cy] = toXY(lon, lat);
+        const grad = nctx.createRadialGradient(cx, cy, 0, cx, cy, size);
+        grad.addColorStop(0, 'rgba(255, 235, 150, 0.95)');
+        grad.addColorStop(0.35, 'rgba(245, 158, 11, 0.7)');
+        grad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+        nctx.fillStyle = grad;
+        nctx.beginPath();
+        nctx.arc(cx, cy, size, 0, Math.PI * 2);
+        nctx.fill();
+      });
+
+      // Highlight the Rectenna Station at Night (Bright Cyan Beacon)
+      const rGrad = nctx.createRadialGradient(rx, ry, 0, rx, ry, 28);
+      rGrad.addColorStop(0, 'rgba(0, 240, 255, 1.0)');
+      rGrad.addColorStop(0.4, 'rgba(16, 185, 129, 0.8)');
+      rGrad.addColorStop(1, 'rgba(0, 240, 255, 0)');
+      nctx.fillStyle = rGrad;
+      nctx.beginPath();
+      nctx.arc(rx, ry, 28, 0, Math.PI * 2);
+      nctx.fill();
+
+      // 3. Solar Panel Texture
+      const panelCanvas = document.createElement('canvas');
+      panelCanvas.width = 512;
+      panelCanvas.height = 256;
+      const pctx = panelCanvas.getContext('2d');
+
+      pctx.fillStyle = '#061325'; // Deep photovoltaic dark blue
+      pctx.fillRect(0, 0, 512, 256);
+
+      // Grid of solar cells
+      pctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      pctx.lineWidth = 1;
+      const cellW = 32, cellH = 32;
+      for (let x = 0; x < 512; x += cellW) {
+        for (let y = 0; y < 256; y += cellH) {
+          pctx.strokeRect(x + 1, y + 1, cellW - 2, cellH - 2);
+          // Metallic busbar silver line
+          pctx.fillStyle = 'rgba(200, 220, 255, 0.35)';
+          pctx.fillRect(x + cellW / 2 - 1, y + 1, 2, cellH - 2);
+        }
+      }
+
+      return { dayCanvas, nightCanvas, panelCanvas };
+    }
+
+    /* --- Shader Sources --- */
+    const Shaders = {
+      // 1. Earth Shader (Day/Night Blending, Atmosphere Rim, Ocean Specular)
+      earth: {
+        vs: `
+          attribute vec3 aPosition;
+          attribute vec3 aNormal;
+          attribute vec2 aUv;
+
+          uniform mat4 uModelMatrix;
+          uniform mat4 uViewMatrix;
+          uniform mat4 uProjectionMatrix;
+          uniform mat3 uNormalMatrix;
+
+          varying vec3 vNormal;
+          varying vec3 vWorldPos;
+          varying vec2 vUv;
+
+          void main() {
+            vUv = aUv;
+            vNormal = normalize(uNormalMatrix * aNormal);
+            vec4 worldPos = uModelMatrix * vec4(aPosition, 1.0);
+            vWorldPos = worldPos.xyz;
+            gl_Position = uProjectionMatrix * uViewMatrix * worldPos;
+          }
+        `,
+        fs: `
+          precision mediump float;
+
+          varying vec3 vNormal;
+          varying vec3 vWorldPos;
+          varying vec2 vUv;
+
+          uniform vec3 uSunDir;
+          uniform vec3 uCameraPos;
+          uniform sampler2D uDayTexture;
+          uniform sampler2D uNightTexture;
+
+          void main() {
+            vec3 N = normalize(vNormal);
+            vec3 L = normalize(uSunDir);
+            vec3 V = normalize(uCameraPos - vWorldPos);
+
+            float nDotL = dot(N, L);
+            // Smooth day-night transition terminator
+            float dayFactor = smoothstep(-0.15, 0.15, nDotL);
+
+            vec4 dayColor = texture2D(uDayTexture, vUv);
+            vec4 nightColor = texture2D(uNightTexture, vUv);
+
+            // Ocean Specular Glint
+            float spec = 0.0;
+            bool isOcean = (dayColor.b > dayColor.r * 1.15);
+            if (isOcean && nDotL > 0.0) {
+              vec3 H = normalize(L + V);
+              spec = pow(max(0.0, dot(N, H)), 32.0) * 0.55;
+            }
+
+            // Atmosphere Rim Scattering
+            float rim = 1.0 - max(0.0, dot(N, V));
+            rim = pow(rim, 3.5) * 0.7 * max(0.1, nDotL + 0.35);
+            vec3 atmosColor = vec3(0.3, 0.65, 1.0) * rim;
+
+            // Combined lit color
+            vec3 litDay = dayColor.rgb * (max(0.06, nDotL * 0.94 + 0.06) + spec);
+            vec3 litNight = nightColor.rgb * 1.4;
+
+            vec3 finalRgb = mix(litNight, litDay, dayFactor) + atmosColor;
+            gl_FragColor = vec4(finalRgb, 1.0);
+          }
+        `
+      },
+
+      // 2. Sun & Emissive Core Shader
+      sun: {
+        vs: `
+          attribute vec3 aPosition;
+          attribute vec3 aNormal;
+          uniform mat4 uModelViewMatrix;
+          uniform mat4 uProjectionMatrix;
+          varying vec3 vNormal;
+
+          void main() {
+            vNormal = aNormal;
+            gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aPosition, 1.0);
+          }
+        `,
+        fs: `
+          precision mediump float;
+          varying vec3 vNormal;
+          uniform float uTime;
+
+          void main() {
+            vec3 n = normalize(vNormal);
+            float pulse = 0.9 + 0.1 * sin(uTime * 3.0);
+            vec3 sunCore = vec3(1.0, 0.95, 0.6) * pulse;
+            gl_FragColor = vec4(sunCore, 1.0);
+          }
+        `
+      },
+
+      // 3. Simple Color Shader (Lines, Orbit Rings, Panels)
+      basic: {
+        vs: `
+          attribute vec3 aPosition;
+          uniform mat4 uModelViewMatrix;
+          uniform mat4 uProjectionMatrix;
+
+          void main() {
+            gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aPosition, 1.0);
+          }
+        `,
+        fs: `
+          precision mediump float;
+          uniform vec4 uColor;
+
+          void main() {
+            gl_FragColor = uColor;
+          }
+        `
+      },
+
+      // 4. Energy Transmission Beam Shader (Helical microwave waves + Pulsing glow)
+      beam: {
+        vs: `
+          attribute vec3 aPosition;
+          attribute vec2 aUv;
+          uniform mat4 uModelViewMatrix;
+          uniform mat4 uProjectionMatrix;
+          varying vec2 vUv;
+
+          void main() {
+            vUv = aUv;
+            gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aPosition, 1.0);
+          }
+        `,
+        fs: `
+          precision mediump float;
+          varying vec2 vUv;
+          uniform float uTime;
+          uniform float uActive;
+
+          void main() {
+            if (uActive < 0.5) discard;
+            
+            // Animated electromagnetic wave ripple down the beam
+            float wave = sin(vUv.y * 35.0 - uTime * 14.0) * 0.5 + 0.5;
+            float pulse = 0.75 + 0.25 * sin(uTime * 5.0);
+            
+            // Cyan to emerald power beam
+            vec3 beamColor = mix(vec3(0.0, 0.95, 1.0), vec3(0.1, 1.0, 0.6), wave);
+            float alpha = (0.35 + 0.45 * wave) * pulse;
+
+            // Fade slightly at the edges
+            float edgeFade = 1.0 - abs(vUv.x - 0.5) * 2.0;
+            alpha *= pow(max(0.0, edgeFade), 1.2);
+
+            gl_FragColor = vec4(beamColor * 1.3, alpha);
+          }
+        `
+      },
+
+      // 5. Earth Shadow Cone (Umbra) Shader
+      shadowCone: {
+        vs: `
+          attribute vec3 aPosition;
+          uniform mat4 uModelViewMatrix;
+          uniform mat4 uProjectionMatrix;
+          varying vec3 vPos;
+
+          void main() {
+            vPos = aPosition;
+            gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aPosition, 1.0);
+          }
+        `,
+        fs: `
+          precision mediump float;
+          varying vec3 vPos;
+
+          void main() {
+            // Semi-transparent deep indigo shadow volume
+            float depthGrad = clamp((vPos.z) / 45.0, 0.0, 1.0);
+            vec3 shadowColor = vec3(0.08, 0.05, 0.22);
+            float alpha = 0.18 * (1.0 - depthGrad * 0.5);
+            gl_FragColor = vec4(shadowColor, alpha);
+          }
+        `
+      }
+    };
+
+    /* --- Mesh Geometry Generators --- */
+    function createSphere(radius, latBands = 48, lonBands = 48) {
+      const positions = [];
+      const normals = [];
+      const uvs = [];
+      const indices = [];
+
+      for (let lat = 0; lat <= latBands; lat++) {
+        const theta = lat * Math.PI / latBands;
+        const sinTheta = Math.sin(theta);
+        const cosTheta = Math.cos(theta);
+
+        for (let lon = 0; lon <= lonBands; lon++) {
+          const phi = lon * 2 * Math.PI / lonBands;
+          const sinPhi = Math.sin(phi);
+          const cosPhi = Math.cos(phi);
+
+          const x = cosPhi * sinTheta;
+          const y = cosTheta;
+          const z = sinPhi * sinTheta;
+          const u = 1 - (lon / lonBands);
+          const v = lat / latBands;
+
+          normals.push(x, y, z);
+          uvs.push(u, v);
+          positions.push(radius * x, radius * y, radius * z);
+        }
+      }
+
+      for (let lat = 0; lat < latBands; lat++) {
+        for (let lon = 0; lon < lonBands; lon++) {
+          const first = (lat * (lonBands + 1)) + lon;
+          const second = first + lonBands + 1;
+          indices.push(first, second, first + 1);
+          indices.push(second, second + 1, first + 1);
+        }
+      }
+
+      return {
+        positions: new Float32Array(positions),
+        normals: new Float32Array(normals),
+        uvs: new Float32Array(uvs),
+        indices: new Uint16Array(indices)
+      };
+    }
+
+    function createCircle(radius, segments = 96) {
+      const positions = [];
+      for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        positions.push(Math.cos(theta) * radius, 0, Math.sin(theta) * radius);
+      }
+      return new Float32Array(positions);
+    }
+
+    function createBeamCylinder(radius, length, segments = 24) {
+      const positions = [];
+      const uvs = [];
+      const indices = [];
+
+      for (let i = 0; i <= segments; i++) {
+        const u = i / segments;
+        const theta = u * Math.PI * 2;
+        const x = Math.cos(theta) * radius;
+        const z = Math.sin(theta) * radius;
+
+        // Top vertex (satellite transmitter)
+        positions.push(x, 0, z);
+        uvs.push(u, 0);
+
+        // Bottom vertex (ground rectenna)
+        positions.push(x * 1.35, length, z * 1.35); // Slight beam divergence
+        uvs.push(u, 1);
+      }
+
+      for (let i = 0; i < segments; i++) {
+        const top1 = i * 2;
+        const btm1 = i * 2 + 1;
+        const top2 = (i + 1) * 2;
+        const btm2 = (i + 1) * 2 + 1;
+        indices.push(top1, btm1, top2);
+        indices.push(top2, btm1, btm2);
+      }
+
+      return {
+        positions: new Float32Array(positions),
+        uvs: new Float32Array(uvs),
+        indices: new Uint16Array(indices)
+      };
+    }
+
+    function createShadowCone(earthRadius, coneLength, segments = 36) {
+      // Earth umbra tapers down slightly over distance
+      const positions = [];
+      const indices = [];
+      const baseRadius = earthRadius * 0.98;
+      const endRadius = earthRadius * 0.85;
+
+      for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        const cos = Math.cos(theta);
+        const sin = Math.sin(theta);
+
+        // Base (at Earth)
+        positions.push(cos * baseRadius, sin * baseRadius, 0);
+        // End (in deep space past GEO)
+        positions.push(cos * endRadius, sin * endRadius, coneLength);
+      }
+
+      for (let i = 0; i < segments; i++) {
+        const b1 = i * 2;
+        const e1 = i * 2 + 1;
+        const b2 = (i + 1) * 2;
+        const e2 = (i + 1) * 2 + 1;
+        indices.push(b1, e1, b2);
+        indices.push(b2, e1, e2);
+      }
+
+      return {
+        positions: new Float32Array(positions),
+        indices: new Uint16Array(indices)
+      };
+    }
+
+    function createBox(sx, sy, sz) {
+      const hx = sx/2, hy = sy/2, hz = sz/2;
+      const positions = new Float32Array([
+        // Front
+        -hx, -hy,  hz,   hx, -hy,  hz,   hx,  hy,  hz,  -hx,  hy,  hz,
+        // Back
+        -hx, -hy, -hz,  -hx,  hy, -hz,   hx,  hy, -hz,   hx, -hy, -hz,
+        // Top
+        -hx,  hy, -hz,  -hx,  hy,  hz,   hx,  hy,  hz,   hx,  hy, -hz,
+        // Bottom
+        -hx, -hy, -hz,   hx, -hy, -hz,   hx, -hy,  hz,  -hx, -hy,  hz,
+        // Right
+         hx, -hy, -hz,   hx,  hy, -hz,   hx,  hy,  hz,   hx, -hy,  hz,
+        // Left
+        -hx, -hy, -hz,  -hx, -hy,  hz,  -hx,  hy,  hz,  -hx,  hy, -hz
+      ]);
+      const indices = new Uint16Array([
+        0, 1, 2,  0, 2, 3,
+        4, 5, 6,  4, 6, 7,
+        8, 9, 10, 8, 10, 11,
+        12, 13, 14, 12, 14, 15,
+        16, 17, 18, 16, 18, 19,
+        20, 21, 22, 20, 22, 23
+      ]);
+      return { positions, indices };
+    }
+
+    /* --- Application State & WebGL Engine --- */
+    window.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('glcanvas');
+      const gl = canvas.getContext('webgl', { antialias: true, alpha: false }) || canvas.getContext('experimental-webgl');
+
+      if (!gl) {
+        alert('WebGL is not supported in your browser.');
+        return;
+      }
+
+      // Compile WebGL program helper
+      function createProgram(vsSource, fsSource) {
+        const vs = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vs, vsSource);
+        gl.compileShader(vs);
+        if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+          console.error('VS Error:', gl.getShaderInfoLog(vs));
+          return null;
+        }
+
+        const fs = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fs, fsSource);
+        gl.compileShader(fs);
+        if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+          console.error('FS Error:', gl.getShaderInfoLog(fs));
+          return null;
+        }
+
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+          console.error('Program link error:', gl.getProgramInfoLog(prog));
+          return null;
+        }
+        return prog;
+      }
+
+      // Build Shader Programs
+      const pEarth = createProgram(Shaders.earth.vs, Shaders.earth.fs);
+      const pSun = createProgram(Shaders.sun.vs, Shaders.sun.fs);
+      const pBasic = createProgram(Shaders.basic.vs, Shaders.basic.fs);
+      const pBeam = createProgram(Shaders.beam.vs, Shaders.beam.fs);
+      const pShadow = createProgram(Shaders.shadowCone.vs, Shaders.shadowCone.fs);
+
+      // Procedural Textures
+      const { dayCanvas, nightCanvas, panelCanvas } = generateEarthTextures();
+
+      function createGLTexture(source) {
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        return tex;
+      }
+
+      const tDay = createGLTexture(dayCanvas);
+      const tNight = createGLTexture(nightCanvas);
+      const tPanel = createGLTexture(panelCanvas);
+
+      // Model Scale Dimensions (Relative educational units)
+      // True Earth radius = 6,378 km -> 2.0 units
+      // GEO radius = 42,164 km -> 2.0 * (42164 / 6378) = 13.22 units!
+      const EARTH_RADIUS = 2.0;
+      const GEO_RADIUS = 13.22; // Exactly 6.61 Earth Radii
+      const SUN_DIST_GEO_VIEW = 70.0;
+      const SUN_DIST_HELIO_VIEW = 140.0;
+
+      // Geometries
+      const mEarth = createSphere(EARTH_RADIUS, 54, 54);
+      const mSun = createSphere(6.0, 32, 32);
+      const mGeoRing = createCircle(GEO_RADIUS, 128);
+      const mHelioRing = createCircle(SUN_DIST_HELIO_VIEW, 180);
+      const mBeam = createBeamCylinder(0.18, GEO_RADIUS - EARTH_RADIUS, 24);
+      const mShadow = createShadowCone(EARTH_RADIUS, 35.0, 48);
+      const mSatBus = createBox(0.4, 0.4, 0.5);
+      const mSatWing = createBox(1.8, 0.04, 0.6);
+      const mRectenna = createCircle(0.35, 32);
+
+      // Starfield Particles (1,500 distant stars)
+      const starCount = 1500;
+      const starPositions = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount; i++) {
+        const u = Math.random();
+        const v = Math.random();
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
+        const r = 350.0 + Math.random() * 50.0;
+        starPositions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+        starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        starPositions[i * 3 + 2] = r * Math.cos(phi);
+      }
+
+      // Helper to allocate WebGL Buffers
+      function initMeshBuffers(mesh) {
+        const bPos = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, bPos);
+        gl.bufferData(gl.ARRAY_BUFFER, mesh.positions, gl.STATIC_DRAW);
+
+        let bNorm = null;
+        if (mesh.normals) {
+          bNorm = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, bNorm);
+          gl.bufferData(gl.ARRAY_BUFFER, mesh.normals, gl.STATIC_DRAW);
+        }
+
+        let bUv = null;
+        if (mesh.uvs) {
+          bUv = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, bUv);
+          gl.bufferData(gl.ARRAY_BUFFER, mesh.uvs, gl.STATIC_DRAW);
+        }
+
+        let bIdx = null;
+        if (mesh.indices) {
+          bIdx = gl.createBuffer();
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bIdx);
+          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW);
+        }
+
+        return { bPos, bNorm, bUv, bIdx, count: mesh.indices ? mesh.indices.length : (mesh.positions.length / 3) };
+      }
+
+      const bufEarth = initMeshBuffers(mEarth);
+      const bufSun = initMeshBuffers(mSun);
+      const bufBeam = initMeshBuffers(mBeam);
+      const bufShadow = initMeshBuffers(mShadow);
+      const bufSatBus = initMeshBuffers(mSatBus);
+      const bufSatWing = initMeshBuffers(mSatWing);
+
+      // Line Buffers
+      const bGeoRing = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, bGeoRing);
+      gl.bufferData(gl.ARRAY_BUFFER, mGeoRing, gl.STATIC_DRAW);
+
+      const bHelioRing = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, bHelioRing);
+      gl.bufferData(gl.ARRAY_BUFFER, mHelioRing, gl.STATIC_DRAW);
+
+      const bStars = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, bStars);
+      gl.bufferData(gl.ARRAY_BUFFER, starPositions, gl.STATIC_DRAW);
+
+      const bRectenna = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, bRectenna);
+      gl.bufferData(gl.ARRAY_BUFFER, mRectenna, gl.STATIC_DRAW);
+
+      /* --- Simulation & Camera State --- */
+      const state = {
+        running: true,
+        timeSpeed: 1.0, // hours per second
+        simTimeHours: 80 * 24 + 12, // Start at Spring Equinox (Day 80), Noon
+        currentView: 'geo', // 'geo', 'heliocentric', 'ground', 'satellite'
+        
+        // Layers
+        layerBeam: true,
+        layerShadow: true,
+        layerGeoRing: true,
+        layerEquator: true,
+        layerSunRays: true,
+
+        // Camera Orbit Controls
+        camera: {
+          target: Vec3.create(0, 0, 0),
+          currentEye: Vec3.create(0, 10, 26),
+          desiredEye: Vec3.create(0, 10, 26),
+          azimuth: 0.4,
+          elevation: 0.35,
+          distance: 26.0,
+          isDragging: false,
+          dragButton: 0,
+          lastX: 0,
+          lastY: 0
+        },
+
+        // Status & Telemetry
+        isEclipse: false,
+        eclipseRemainingMin: 0
+      };
+
+      /* --- View Mode Camera Presets --- */
+      function setViewMode(mode) {
+        state.currentView = mode;
+        document.querySelectorAll('.view-btn').forEach(btn => {
+          if (btn.dataset.view === mode) {
+            btn.className = "view-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 shadow-sm transition-all duration-200 flex items-center gap-1.5";
+          } else {
+            btn.className = "view-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center gap-1.5";
+          }
+        });
+
+        if (mode === 'geo') {
+          state.camera.target = Vec3.create(0, 0, 0);
+          state.camera.distance = 26.0;
+          state.camera.elevation = 0.35;
+          state.camera.azimuth = 0.4;
+        } else if (mode === 'heliocentric') {
+          state.camera.target = Vec3.create(0, 0, 0);
+          state.camera.distance = 220.0;
+          state.camera.elevation = 0.75;
+          state.camera.azimuth = 0.8;
+        } else if (mode === 'ground') {
+          // Look from rectenna on Earth looking up to GEO satellite at zenith
+          state.camera.distance = 8.0;
+          state.camera.elevation = 0.1;
+        } else if (mode === 'satellite') {
+          // Attached to satellite looking directly down at Earth
+          state.camera.distance = 18.0;
+          state.camera.elevation = 0.05;
+        }
+      }
+
+      document.querySelectorAll('.view-btn').forEach(b => {
+        b.addEventListener('click', (e) => setViewMode(b.dataset.view));
+      });
+
+      // Reset Camera
+      document.getElementById('btn-reset-cam').addEventListener('click', () => {
+        setViewMode(state.currentView);
+      });
+
+      // Mouse Drag Controls
+      canvas.addEventListener('mousedown', (e) => {
+        state.camera.isDragging = true;
+        state.camera.dragButton = e.button;
+        state.camera.lastX = e.clientX;
+        state.camera.lastY = e.clientY;
+      });
+
+      window.addEventListener('mouseup', () => {
+        state.camera.isDragging = false;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!state.camera.isDragging) return;
+        const dx = e.clientX - state.camera.lastX;
+        const dy = e.clientY - state.camera.lastY;
+        state.camera.lastX = e.clientX;
+        state.camera.lastY = e.clientY;
+
+        if (state.camera.dragButton === 0) { // Rotate
+          state.camera.azimuth -= dx * 0.007;
+          state.camera.elevation = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, state.camera.elevation + dy * 0.007));
+        } else if (state.camera.dragButton === 2) { // Pan
+          const panSpeed = state.camera.distance * 0.001;
+          state.camera.target[0] -= dx * panSpeed;
+          state.camera.target[1] += dy * panSpeed;
+        }
+      });
+
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 0.9 : 1.1;
+        const minD = state.currentView === 'heliocentric' ? 40.0 : 4.5;
+        const maxD = state.currentView === 'heliocentric' ? 500.0 : 80.0;
+        state.camera.distance = Math.max(minD, Math.min(maxD, state.camera.distance * factor));
+      }, { passive: false });
+
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+      // Touch controls
+      let touchStartX = 0, touchStartY = 0, touchStartDist = 0;
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+        } else if (e.touches.length === 2) {
+          touchStartDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+          const dx = e.touches[0].clientX - touchStartX;
+          const dy = e.touches[0].clientY - touchStartY;
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          state.camera.azimuth -= dx * 0.008;
+          state.camera.elevation = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, state.camera.elevation + dy * 0.008));
+        } else if (e.touches.length === 2) {
+          const dist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          if (touchStartDist > 0) {
+            const factor = touchStartDist / dist;
+            state.camera.distance = Math.max(4.5, Math.min(300.0, state.camera.distance * factor));
+            touchStartDist = dist;
+          }
+        }
+      }, { passive: true });
+
+      // Time UI bindings
+      const btnPlayPause = document.getElementById('btn-play-pause');
+      const iconPlay = document.getElementById('icon-play');
+      const iconPause = document.getElementById('icon-pause');
+      const playText = document.getElementById('play-text');
+      const timeSlider = document.getElementById('time-speed-slider');
+      const speedDisplay = document.getElementById('speed-display');
+
+      btnPlayPause.addEventListener('click', () => {
+        state.running = !state.running;
+        iconPlay.classList.toggle('hidden', state.running);
+        iconPause.classList.toggle('hidden', !state.running);
+        playText.textContent = state.running ? 'Pause' : 'Resume';
+      });
+
+      timeSlider.addEventListener('input', (e) => {
+        state.timeSpeed = parseFloat(e.target.value);
+        speedDisplay.textContent = state.timeSpeed.toFixed(1) + ' hr/sec';
+      });
+
+      document.getElementById('btn-step-h').addEventListener('click', () => {
+        state.simTimeHours += 1.0;
+      });
+
+      document.getElementById('btn-step-d').addEventListener('click', () => {
+        state.simTimeHours += 24.0;
+      });
+
+      // Season Buttons
+      document.querySelectorAll('.season-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const day = parseFloat(btn.dataset.day);
+          state.simTimeHours = day * 24.0 + 12.0; // Noon on that day
+        });
+      });
+
+      // Layer Checkboxes
+      document.getElementById('layer-beam').addEventListener('change', (e) => state.layerBeam = e.target.checked);
+      document.getElementById('layer-shadow').addEventListener('change', (e) => state.layerShadow = e.target.checked);
+      document.getElementById('layer-georing').addEventListener('change', (e) => state.layerGeoRing = e.target.checked);
+      document.getElementById('layer-equator').addEventListener('change', (e) => state.layerEquator = e.target.checked);
+      document.getElementById('layer-sunrays').addEventListener('change', (e) => state.layerSunRays = e.target.checked);
+
+      // Blog Guide Modal Handlers
+      const guideModal = document.getElementById('guide-modal');
+      document.getElementById('btn-open-guide').addEventListener('click', () => {
+        guideModal.classList.remove('hidden');
+        guideModal.classList.add('flex');
+      });
+      const closeGuide = () => {
+        guideModal.classList.add('hidden');
+        guideModal.classList.remove('flex');
+      };
+      document.getElementById('btn-close-guide').addEventListener('click', closeGuide);
+      document.getElementById('btn-close-guide-footer').addEventListener('click', closeGuide);
+
+      // Modal Tab Switching
+      document.querySelectorAll('.modal-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.modal-tab').forEach(t => {
+            t.className = "modal-tab px-4 py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200";
+          });
+          tab.className = "modal-tab px-4 py-2.5 border-b-2 border-cyan-400 text-cyan-400";
+
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+          document.getElementById(tab.dataset.tab).classList.remove('hidden');
+        });
+      });
+
+      // Dynamic Bottom Insights Carousel
+      const insights = [
+        "In GEO (35,786 km), the satellite completes 1 orbit per day, hovering perpetually over the ground rectenna while bathing in continuous sunlight!",
+        "Earth's 23.44° axial tilt means that during summer and winter solstices, the GEO orbit bypasses Earth's shadow completely—experiencing zero night!",
+        "Equinox eclipses last at most 72 minutes around midnight, occurring for only ~44 days twice a year. Space solar enjoys over 99.1% annual sunlight!",
+        "Wireless power beaming uses 2.45 GHz or 5.8 GHz microwaves that penetrate heavy clouds, storms, and rain with under 2% atmospheric loss.",
+        "Unlike nuclear or fossil fuels, space-based solar produces continuous zero-emission baseload power without needing massive multi-gigawatt grid batteries."
+      ];
+      let insightIdx = 0;
+      document.getElementById('btn-next-insight').addEventListener('click', () => {
+        insightIdx = (insightIdx + 1) % insights.length;
+        document.getElementById('dynamic-insight-text').innerHTML = `
+          <strong class="text-cyan-300">Key Takeaway:</strong> ${insights[insightIdx]}
+        `;
+      });
+
+      // Minimize Telemetry Panel toggle for smaller screens
+      let panelsCollapsed = false;
+      document.getElementById('btn-toggle-panels').addEventListener('click', () => {
+        panelsCollapsed = !panelsCollapsed;
+        document.getElementById('left-panel').classList.toggle('opacity-25', panelsCollapsed);
+        document.getElementById('right-panel').classList.toggle('opacity-25', panelsCollapsed);
+      });
+
+      /* --- Render Loop --- */
+      let lastTimestamp = performance.now();
+      const pMatrix = Mat4.create();
+      const vMatrix = Mat4.create();
+      const mMatrix = Mat4.create();
+      const mvMatrix = Mat4.create();
+
+      function render(now) {
+        requestAnimationFrame(render);
+
+        const dtSec = Math.min((now - lastTimestamp) / 1000.0, 0.1);
+        lastTimestamp = now;
+
+        // Advance simulation time
+        if (state.running) {
+          state.simTimeHours += dtSec * state.timeSpeed;
+        }
+
+        // Resize Canvas if needed
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+          gl.viewport(0, 0, width, height);
+        }
+
+        // Astronomical calculations
+        const axialTiltRad = 23.44 * Math.PI / 180.0;
+        const dayOfYear = (state.simTimeHours / 24.0) % 365.25;
+        const yearFraction = dayOfYear / 365.25;
+        const solarOrbitAngle = yearFraction * 2.0 * Math.PI;
+
+        // Earth Diurnal Spin: 1 sidereal day is ~23.9344696 hours
+        // Angle of Earth rotation relative to vernal equinox
+        const spinAngle = (state.simTimeHours / 23.9344696) * 2.0 * Math.PI;
+
+        // In Heliocentric coordinates:
+        // Sun is at (0, 0, 0)
+        // Earth position:
+        const earthHeliocentricX = Math.cos(solarOrbitAngle) * SUN_DIST_HELIO_VIEW;
+        const earthHeliocentricZ = Math.sin(solarOrbitAngle) * SUN_DIST_HELIO_VIEW;
+
+        // Sun direction vector in space (from Sun to Earth in ecliptic frame)
+        // At day 80 (vernal equinox), solarOrbitAngle is approx 0
+        const sunDirX = -Math.cos(solarOrbitAngle);
+        const sunDirY = -Math.sin(solarOrbitAngle) * Math.sin(axialTiltRad);
+        const sunDirZ = -Math.sin(solarOrbitAngle) * Math.cos(axialTiltRad);
+        const sunDir = Vec3.create(sunDirX, sunDirY, sunDirZ);
+        Vec3.normalize(sunDir, sunDir);
+
+        // Earth rotation and axial tilt matrix
+        const earthRotMat = Mat4.create();
+        Mat4.identity(earthRotMat);
+        Mat4.rotateX(earthRotMat, earthRotMat, axialTiltRad);
+        Mat4.rotateY(earthRotMat, earthRotMat, spinAngle);
+
+        // Helper to transform 3D point by a 4x4 matrix
+        function transformPoint(m, p) {
+          const x = p[0], y = p[1], z = p[2];
+          return Vec3.create(
+            m[0]*x + m[4]*y + m[8]*z + m[12],
+            m[1]*x + m[5]*y + m[9]*z + m[13],
+            m[2]*x + m[6]*y + m[10]*z + m[14]
+          );
+        }
+
+        // On the Earth texture, lon=0, lat=0 corresponds precisely to local vertex (-1, 0, 0)
+        // Therefore, in Earth's local equatorial frame:
+        const localRectenna = [-EARTH_RADIUS, 0, 0];
+        const localSubSat = [-GEO_RADIUS, 0, 0];
+
+        // Transform into world space using the exact same matrix as the Earth globe!
+        const satPos = transformPoint(earthRotMat, localSubSat);
+        const rectennaPos = transformPoint(earthRotMat, localRectenna);
+
+        // Check if Satellite is in Earth's Umbral Eclipse:
+        // The shadow extends along -sunDir.
+        // Project satellite onto shadow axis:
+        const dotSatSun = Vec3.dot(satPos, sunDir); // negative when on dark side
+        let inEclipse = false;
+        if (dotSatSun < 0) {
+          // Distance along shadow cone axis:
+          const distAlongShadow = -dotSatSun;
+          // Perpendicular distance from shadow axis:
+          const perpX = satPos[0] + sunDir[0] * distAlongShadow;
+          const perpY = satPos[1] + sunDir[1] * distAlongShadow;
+          const perpZ = satPos[2] + sunDir[2] * distAlongShadow;
+          const perpDist = Math.hypot(perpX, perpY, perpZ);
+
+          const shadowRadiusAtGeo = EARTH_RADIUS * (1.0 - distAlongShadow / 100.0);
+          if (perpDist < shadowRadiusAtGeo) {
+            inEclipse = true;
+          }
+        }
+        state.isEclipse = inEclipse;
+
+        // Update Live Telemetry HUD Elements
+        const statusBanner = document.getElementById('status-banner');
+        const beamStatusDot = document.getElementById('beam-status-dot');
+        const beamStatusText = document.getElementById('beam-status-text');
+        const illumStatus = document.getElementById('illumination-status');
+        const clockDisplay = document.getElementById('clock-display');
+        const dayDisplay = document.getElementById('day-display');
+
+        // Local Solar Time at Rectenna:
+        // Angle between Rectenna and Sun:
+        const normRectenna = Vec3.create();
+        Vec3.normalize(normRectenna, rectennaPos);
+        const cosSun = Vec3.dot(normRectenna, sunDir);
+        // Approximate local solar hour (0 to 24)
+        // Noon when cosSun is +1
+        const localHour = ((state.simTimeHours) % 24 + 24) % 24;
+        const lhH = Math.floor(localHour);
+        const lhM = Math.floor((localHour - lhH) * 60);
+        clockDisplay.textContent = `${String(lhH).padStart(2,'0')}:${String(lhM).padStart(2,'0')}:00 (${lhH >= 6 && lhH < 18 ? 'Daytime' : 'Nighttime'})`;
+        dayDisplay.textContent = `Day ${Math.floor(dayOfYear)} (${dayOfYear < 80 ? 'Winter' : dayOfYear < 172 ? 'Spring' : dayOfYear < 266 ? 'Summer' : 'Autumn'})`;
+
+        if (inEclipse) {
+          statusBanner.className = "rounded-lg p-2.5 bg-gradient-to-r from-amber-950/90 to-red-950/90 border border-amber-500/50";
+          beamStatusDot.className = "w-2 h-2 rounded-full bg-amber-400";
+          beamStatusText.innerHTML = `⚠️ Umbral Eclipse: Satellite in Earth Shadow`;
+          beamStatusText.className = "text-xs font-semibold text-amber-300 mt-1 flex items-center gap-1.5";
+          illumStatus.innerHTML = `🔋 Thermal Battery Backup Active (Max 72 min)`;
+        } else {
+          statusBanner.className = "rounded-lg p-2.5 bg-gradient-to-r from-cyan-950/80 to-emerald-950/80 border border-cyan-500/40";
+          beamStatusDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+          beamStatusText.innerHTML = `⚡ 2.0 GW Microwave Link Active (99.8% Lock)`;
+          beamStatusText.className = "text-xs font-semibold text-emerald-300 mt-1 flex items-center gap-1.5";
+          illumStatus.innerHTML = `☀️ Satellite in Full Sunlight (1,361 W/m²)`;
+        }
+
+        // Camera Positioning & View Matrix
+        let camTarget = state.camera.target;
+        let eyeX, eyeY, eyeZ;
+
+        if (state.currentView === 'ground') {
+          // Camera placed slightly offset from rectenna, looking directly up at the GEO satellite!
+          camTarget = satPos;
+          eyeX = rectennaPos[0] + normRectenna[0] * 0.4;
+          eyeY = rectennaPos[1] + normRectenna[1] * 0.4;
+          eyeZ = rectennaPos[2] + normRectenna[2] * 0.4;
+        } else if (state.currentView === 'satellite') {
+          // Camera placed right behind the satellite looking down at Earth
+          camTarget = rectennaPos;
+          eyeX = satPos[0] + normRectenna[0] * 3.5;
+          eyeY = satPos[1] + normRectenna[1] * 3.5;
+          eyeZ = satPos[2] + normRectenna[2] * 3.5;
+        } else {
+          // Orbiting camera around target
+          const cosElev = Math.cos(state.camera.elevation);
+          eyeX = camTarget[0] + state.camera.distance * Math.sin(state.camera.azimuth) * cosElev;
+          eyeY = camTarget[1] + state.camera.distance * Math.sin(state.camera.elevation);
+          eyeZ = camTarget[2] + state.camera.distance * Math.cos(state.camera.azimuth) * cosElev;
+        }
+
+        const eyePos = Vec3.create(eyeX, eyeY, eyeZ);
+        Mat4.perspective(pMatrix, 45.0 * Math.PI / 180.0, width / height, 0.2, 800.0);
+        Mat4.lookAt(vMatrix, eyePos, camTarget, [0, 1, 0]);
+
+        // Clear WebGL buffer
+        gl.clearColor(0.01, 0.02, 0.04, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.enable(gl.DEPTH_TEST);
+
+        /* --- 1. Draw Starfield Background --- */
+        gl.useProgram(pBasic);
+        Mat4.identity(mMatrix);
+        Mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        gl.uniformMatrix4fv(gl.getUniformLocation(pBasic, 'uModelViewMatrix'), false, mvMatrix);
+        gl.uniformMatrix4fv(gl.getUniformLocation(pBasic, 'uProjectionMatrix'), false, pMatrix);
+        gl.uniform4f(gl.getUniformLocation(pBasic, 'uColor'), 0.85, 0.9, 1.0, 0.8);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, bStars);
+        const locBasicPos = gl.getAttribLocation(pBasic, 'aPosition');
+        gl.enableVertexAttribArray(locBasicPos);
+        gl.vertexAttribPointer(locBasicPos, 3, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.POINTS, 0, starCount);
+
+        /* --- 2. Draw Sun --- */
+        gl.useProgram(pSun);
+        Mat4.identity(mMatrix);
+        if (state.currentView === 'heliocentric') {
+          // Sun is centered at origin
+          Mat4.translate(mMatrix, mMatrix, [0, 0, 0]);
+        } else {
+          // Sun is positioned along sunDir in Geocentric view
+          Mat4.translate(mMatrix, mMatrix, [sunDir[0] * SUN_DIST_GEO_VIEW, sunDir[1] * SUN_DIST_GEO_VIEW, sunDir[2] * SUN_DIST_GEO_VIEW]);
+        }
+        Mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        gl.uniformMatrix4fv(gl.getUniformLocation(pSun, 'uModelViewMatrix'), false, mvMatrix);
+        gl.uniformMatrix4fv(gl.getUniformLocation(pSun, 'uProjectionMatrix'), false, pMatrix);
+        gl.uniform1f(gl.getUniformLocation(pSun, 'uTime'), now * 0.001);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufSun.bPos);
+        const locSunPos = gl.getAttribLocation(pSun, 'aPosition');
+        gl.enableVertexAttribArray(locSunPos);
+        gl.vertexAttribPointer(locSunPos, 3, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufSun.bNorm);
+        const locSunNorm = gl.getAttribLocation(pSun, 'aNormal');
+        gl.enableVertexAttribArray(locSunNorm);
+        gl.vertexAttribPointer(locSunNorm, 3, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufSun.bIdx);
+        gl.drawElements(gl.TRIANGLES, bufSun.count, gl.UNSIGNED_SHORT, 0);
+
+        /* --- 3. Draw Earth --- */
+        gl.useProgram(pEarth);
+        Mat4.identity(mMatrix);
+        if (state.currentView === 'heliocentric') {
+          Mat4.translate(mMatrix, mMatrix, [earthHeliocentricX, 0, earthHeliocentricZ]);
+        }
+        // Apply 23.44° Obliquity / Axial Tilt
+        Mat4.rotateX(mMatrix, mMatrix, axialTiltRad);
+        // Apply Diurnal Earth Spin
+        Mat4.rotateY(mMatrix, mMatrix, spinAngle);
+
+        // Normal matrix (extract rotation)
+        const normalMatrix = new Float32Array([
+          mMatrix[0], mMatrix[1], mMatrix[2],
+          mMatrix[4], mMatrix[5], mMatrix[6],
+          mMatrix[8], mMatrix[9], mMatrix[10]
+        ]);
+
+        gl.uniformMatrix4fv(gl.getUniformLocation(pEarth, 'uModelMatrix'), false, mMatrix);
+        gl.uniformMatrix4fv(gl.getUniformLocation(pEarth, 'uViewMatrix'), false, vMatrix);
+        gl.uniformMatrix4fv(gl.getUniformLocation(pEarth, 'uProjectionMatrix'), false, pMatrix);
+        gl.uniformMatrix3fv(gl.getUniformLocation(pEarth, 'uNormalMatrix'), false, normalMatrix);
+
+        gl.uniform3fv(gl.getUniformLocation(pEarth, 'uSunDir'), sunDir);
+        gl.uniform3fv(gl.getUniformLocation(pEarth, 'uCameraPos'), eyePos);
+
+        // Bind Textures
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, tDay);
+        gl.uniform1i(gl.getUniformLocation(pEarth, 'uDayTexture'), 0);
+
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, tNight);
+        gl.uniform1i(gl.getUniformLocation(pEarth, 'uNightTexture'), 1);
+
+        // Attributes
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufEarth.bPos);
+        const locEarthPos = gl.getAttribLocation(pEarth, 'aPosition');
+        gl.enableVertexAttribArray(locEarthPos);
+        gl.vertexAttribPointer(locEarthPos, 3, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufEarth.bNorm);
+        const locEarthNorm = gl.getAttribLocation(pEarth, 'aNormal');
+        gl.enableVertexAttribArray(locEarthNorm);
+        gl.vertexAttribPointer(locEarthNorm, 3, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufEarth.bUv);
+        const locEarthUv = gl.getAttribLocation(pEarth, 'aUv');
+        gl.enableVertexAttribArray(locEarthUv);
+        gl.vertexAttribPointer(locEarthUv, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufEarth.bIdx);
+        gl.drawElements(gl.TRIANGLES, bufEarth.count, gl.UNSIGNED_SHORT, 0);
+
+        /* --- 4. Draw Orbit Rings & Layers --- */
+        gl.useProgram(pBasic);
+
+        // Draw GEO Orbit Ring
+        if (state.layerGeoRing) {
+          Mat4.identity(mMatrix);
+          if (state.currentView === 'heliocentric') {
+            Mat4.translate(mMatrix, mMatrix, [earthHeliocentricX, 0, earthHeliocentricZ]);
+          }
+          // Ring lies on Earth's tilted equatorial plane:
+          Mat4.rotateX(mMatrix, mMatrix, axialTiltRad);
+          Mat4.multiply(mvMatrix, vMatrix, mMatrix);
+          gl.uniformMatrix4fv(gl.getUniformLocation(pBasic, 'uModelViewMatrix'), false, mvMatrix);
+          gl.uniformMatrix4fv(gl.getUniformLocation(pBasic, 'uProjectionMatrix'), false, pMatrix);
+          gl.uniform4f(gl.getUniformLocation(pBasic, 'uColor'), 0.96, 0.62, 0.04, 0.7); // Gold
+
+          gl.bindBuffer(gl.ARRAY_BUFFER, bGeoRing);
+          gl.enableVertexAttribArray(locBasicPos);
+          gl.vertexAttribPointer(locBasicPos, 3, gl.FLOAT, false, 0, 0);
+          gl.drawArrays(gl.LINE_LOOP, 0, 128);
+        }
+
+        // Draw Heliocentric Orbit Ring
+        if (state.currentView === 'heliocentric') {
+          Mat4.identity(mMatrix);
+          Mat4.multiply(mvMatrix, vMatrix, mMatrix);
+          gl.uniformMatrix4fv(gl.getUniformLocation(pBasic, 'uModelViewMatrix'), false, mvMatrix);
+          gl.uniform4f(gl.getUniformLocation(pBasic, 'uColor'), 0.22, 0.74, 0.97, 0.45); // Cyan
+
+          gl.bindBuffer(gl.ARRAY_BUFFER, bHelioRing);
+          gl.enableVertexAttribArray(locBasicPos);
+          gl.vertexAttribPointer(locBasicPos, 3, gl.FLOAT, false, 0, 0);
+          gl.drawArrays(gl.LINE_LOOP, 0, 180);
+        }
+
+        // Draw Sun Radiation Flux Rays
+        if (state.layerSunRays && state.currentView !== 'heliocentric') {
+          gl.uniform4f(gl.getUniformLocation(pBasic, 'uColor'), 1.0, 0.9, 0.3, 0.25);
+          for (let r = -2; r <= 2; r++) {
+            const rayBuffer = gl.createBuffer();
+            const rayOffset = r * 3.5;
+            const rStart = [sunDir[0] * 40.0 + rayOffset, sunDir[1] * 40.0, sunDir[2] * 40.0];
+            const rEnd = [sunDir[0] * 18.0 + rayOffset, sunDir[1] * 18.0, sunDir[2] * 18.0];
+            gl.bindBuffer(gl.ARRAY_BUFFER, rayBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([...rStart, ...rEnd]), gl.DYNAMIC_DRAW);
+            gl.vertexAttribPointer(locBasicPos, 3, gl.FLOAT, false, 0, 0);
+            gl.drawArrays(gl.LINES, 0, 2);
+            gl.deleteBuffer(rayBuffer);
+          }
+        }
+
+        /* --- 5. Draw Earth Shadow Cone (Umbra) --- */
+        if (state.layerShadow) {
+          gl.enable(gl.BLEND);
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+          gl.depthMask(false); // Do not overwrite depth so orbit lines are visible inside shadow
+
+          gl.useProgram(pShadow);
+          Mat4.identity(mMatrix);
+          if (state.currentView === 'heliocentric') {
+            Mat4.translate(mMatrix, mMatrix, [earthHeliocentricX, 0, earthHeliocentricZ]);
+          }
+          // Align cone along -sunDir
+          // Rotate Z axis to point along -sunDir
+          const shadowAxis = [-sunDir[0], -sunDir[1], -sunDir[2]];
+          // Compute orientation matrix aligning +Z with shadowAxis
+          const upVector = [0, 1, 0];
+          const rightVector = [
+            upVector[1] * shadowAxis[2] - upVector[2] * shadowAxis[1],
+            upVector[2] * shadowAxis[0] - upVector[0] * shadowAxis[2],
+            upVector[0] * shadowAxis[1] - upVector[1] * shadowAxis[0]
+          ];
+          const rLen = Math.hypot(rightVector[0], rightVector[1], rightVector[2]);
+          if (rLen > 0.001) {
+            rightVector[0] /= rLen; rightVector[1] /= rLen; rightVector[2] /= rLen;
+          }
+          const trueUp = [
+            shadowAxis[1] * rightVector[2] - shadowAxis[2] * rightVector[1],
+            shadowAxis[2] * rightVector[0] - shadowAxis[0] * rightVector[2],
+            shadowAxis[0] * rightVector[1] - shadowAxis[1] * rightVector[0]
+          ];
+
+          mMatrix[0] = rightVector[0]; mMatrix[1] = rightVector[1]; mMatrix[2] = rightVector[2];
+          mMatrix[4] = trueUp[0];      mMatrix[5] = trueUp[1];      mMatrix[6] = trueUp[2];
+          mMatrix[8] = shadowAxis[0];  mMatrix[9] = shadowAxis[1];  mMatrix[10] = shadowAxis[2];
+
+          Mat4.multiply(mvMatrix, vMatrix, mMatrix);
+          gl.uniformMatrix4fv(gl.getUniformLocation(pShadow, 'uModelViewMatrix'), false, mvMatrix);
+          gl.uniformMatrix4fv(gl.getUniformLocation(pShadow, 'uProjectionMatrix'), false, pMatrix);
+
+          gl.bindBuffer(gl.ARRAY_BUFFER, bufShadow.bPos);
+          const locShadowPos = gl.getAttribLocation(pShadow, 'aPosition');
+          gl.enableVertexAttribArray(locShadowPos);
+          gl.vertexAttribPointer(locShadowPos, 3, gl.FLOAT, false, 0, 0);
+
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufShadow.bIdx);
+          gl.drawElements(gl.TRIANGLES, bufShadow.count, gl.UNSIGNED_SHORT, 0);
+
+          gl.depthMask(true);
+          gl.disable(gl.BLEND);
+        }
+
+        /* --- 6. Draw Ground Rectenna Target Station --- */
+        if (state.layerEquator) {
+          gl.useProgram(pBasic);
+          Mat4.identity(mMatrix);
+          if (state.currentView === 'heliocentric') {
+            Mat4.translate(mMatrix, mMatrix, [earthHeliocentricX, 0, earthHeliocentricZ]);
+          }
+          Mat4.translate(mMatrix, mMatrix, rectennaPos);
+          Mat4.multiply(mvMatrix, vMatrix, mMatrix);
+          gl.uniformMatrix4fv(gl.getUniformLocation(pBasic, 'uModelViewMatrix'), false, mvMatrix);
+          gl.uniform4f(gl.getUniformLocation(pBasic, 'uColor'), 0.0, 0.95, 1.0, 0.9);
+
+          gl.bindBuffer(gl.ARRAY_BUFFER, bRectenna);
+          gl.enableVertexAttribArray(locBasicPos);
+          gl.vertexAttribPointer(locBasicPos, 3, gl.FLOAT, false, 0, 0);
+          gl.drawArrays(gl.LINE_LOOP, 0, 32);
+        }
+
+        /* --- 7. Draw Space Solar Power Satellite --- */
+        gl.useProgram(pBasic);
+        Mat4.identity(mMatrix);
+        if (state.currentView === 'heliocentric') {
+          Mat4.translate(mMatrix, mMatrix, [earthHeliocentricX, 0, earthHeliocentricZ]);
+        }
+        Mat4.translate(mMatrix, mMatrix, satPos);
+
+        // Orient satellite body to point dish to Earth and solar arrays toward Sun!
+        Mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        gl.uniformMatrix4fv(gl.getUniformLocation(pBasic, 'uModelViewMatrix'), false, mvMatrix);
+        gl.uniform4f(gl.getUniformLocation(pBasic, 'uColor'), 0.85, 0.85, 0.9, 1.0); // Metallic bus
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufSatBus.bPos);
+        gl.enableVertexAttribArray(locBasicPos);
+        gl.vertexAttribPointer(locBasicPos, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufSatBus.bIdx);
+        gl.drawElements(gl.TRIANGLES, bufSatBus.count, gl.UNSIGNED_SHORT, 0);
+
+        // Draw Solar Array Wings (Blue photovoltaic sheen)
+        gl.uniform4f(gl.getUniformLocation(pBasic, 'uColor'), 0.08, 0.35, 0.75, 1.0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufSatWing.bPos);
+        gl.vertexAttribPointer(locBasicPos, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufSatWing.bIdx);
+        gl.drawElements(gl.TRIANGLES, bufSatWing.count, gl.UNSIGNED_SHORT, 0);
+
+        /* --- 8. Draw Microwave Energy Transmission Beam --- */
+        if (state.layerBeam) {
+          gl.enable(gl.BLEND);
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE); // Additive blending for electric plasma glow!
+          gl.depthMask(false);
+
+          gl.useProgram(pBeam);
+          Mat4.identity(mMatrix);
+          if (state.currentView === 'heliocentric') {
+            Mat4.translate(mMatrix, mMatrix, [earthHeliocentricX, 0, earthHeliocentricZ]);
+          }
+          // Position beam from Satellite to Rectenna
+          Mat4.translate(mMatrix, mMatrix, satPos);
+
+          // Align cylinder along vector pointing from Satellite to Rectenna
+          const beamDir = [
+            rectennaPos[0] - satPos[0],
+            rectennaPos[1] - satPos[1],
+            rectennaPos[2] - satPos[2]
+          ];
+          const beamLen = Math.hypot(beamDir[0], beamDir[1], beamDir[2]);
+          const normBeam = [beamDir[0] / beamLen, beamDir[1] / beamLen, beamDir[2] / beamLen];
+
+          // Compute rotation aligning Y-axis with normBeam
+          const beamUp = [normBeam[0], normBeam[1], normBeam[2]];
+          const beamSide = [1, 0, 0];
+          // Orthogonalize
+          const bRight = [
+            beamUp[1] * beamSide[2] - beamUp[2] * beamSide[1],
+            beamUp[2] * beamSide[0] - beamUp[0] * beamSide[2],
+            beamUp[0] * beamSide[1] - beamUp[1] * beamSide[0]
+          ];
+          const bRlen = Math.hypot(bRight[0], bRight[1], bRight[2]);
+          if (bRlen > 0.001) {
+            bRight[0] /= bRlen; bRight[1] /= bRlen; bRight[2] /= bRlen;
+          }
+          const bFwd = [
+            bRight[1] * beamUp[2] - bRight[2] * beamUp[1],
+            bRight[2] * beamUp[0] - bRight[0] * beamUp[2],
+            bRight[0] * beamUp[1] - bRight[1] * beamUp[0]
+          ];
+
+          mMatrix[0] = bRight[0]; mMatrix[1] = bRight[1]; mMatrix[2] = bRight[2];
+          mMatrix[4] = beamUp[0]; mMatrix[5] = beamUp[1]; mMatrix[6] = beamUp[2];
+          mMatrix[8] = bFwd[0];   mMatrix[9] = bFwd[1];   mMatrix[10] = bFwd[2];
+
+          Mat4.multiply(mvMatrix, vMatrix, mMatrix);
+          gl.uniformMatrix4fv(gl.getUniformLocation(pBeam, 'uModelViewMatrix'), false, mvMatrix);
+          gl.uniformMatrix4fv(gl.getUniformLocation(pBeam, 'uProjectionMatrix'), false, pMatrix);
+          gl.uniform1f(gl.getUniformLocation(pBeam, 'uTime'), now * 0.001);
+          gl.uniform1f(gl.getUniformLocation(pBeam, 'uActive'), 1.0);
+
+          gl.bindBuffer(gl.ARRAY_BUFFER, bufBeam.bPos);
+          const locBeamPos = gl.getAttribLocation(pBeam, 'aPosition');
+          gl.enableVertexAttribArray(locBeamPos);
+          gl.vertexAttribPointer(locBeamPos, 3, gl.FLOAT, false, 0, 0);
+
+          gl.bindBuffer(gl.ARRAY_BUFFER, bufBeam.bUv);
+          const locBeamUv = gl.getAttribLocation(pBeam, 'aUv');
+          gl.enableVertexAttribArray(locBeamUv);
+          gl.vertexAttribPointer(locBeamUv, 2, gl.FLOAT, false, 0, 0);
+
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufBeam.bIdx);
+          gl.drawElements(gl.TRIANGLES, bufBeam.count, gl.UNSIGNED_SHORT, 0);
+
+          gl.depthMask(true);
+          gl.disable(gl.BLEND);
+        }
+      }
+
+      // Launch render loop
+      requestAnimationFrame(render);
+    });
+  </script>
+</body>
+</html>
