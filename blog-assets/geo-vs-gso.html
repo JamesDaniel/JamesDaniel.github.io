@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geostationary (GEO) vs. Geosynchronous (GSO) Orbital Cycle Simulator</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 3px; }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+    .slider-thumb::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      box-shadow: 0 0 10px #38bdf8;
+      border: 2px solid #ffffff;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen p-3 md:p-6 flex flex-col items-center select-none">
+
+  <div class="w-full max-w-5xl flex flex-col gap-5">
+    
+    <!-- Top Header -->
+    <div class="glass-card rounded-2xl p-4 md:p-5 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            ORBITAL CYCLE COMPARATOR
+          </span>
+          <span class="text-xs text-slate-400 font-mono">Same Altitude (35,786 km) • Same 24h Period</span>
+        </div>
+        <h1 class="text-lg md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+          <span>🌐</span> Continuous 24-Hour Orbital Cycle: GEO vs. GSO
+        </h1>
+        <p class="text-xs text-slate-400 mt-1">
+          Watch both satellites orbit Earth over repeating 24-hour cycles. Switch between Earth-Relative and Inertial Space views.
+        </p>
+      </div>
+
+      <!-- Frame of Reference Toggle -->
+      <div class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 self-stretch md:self-auto justify-center">
+        <button id="btn-frame-space" class="frame-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 shadow transition-all flex items-center gap-1.5" data-frame="space">
+          <span>🌌</span> Inertial Space (Rotating Earth)
+        </button>
+        <button id="btn-frame-earth" class="frame-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5" data-frame="earth">
+          <span>🌍</span> Earth-Locked (Figure-8)
+        </button>
+      </div>
+    </div>
+
+    <!-- Main 3D Viewport & Simulation Card -->
+    <div class="glass-card rounded-2xl p-4 md:p-5 shadow-2xl flex flex-col gap-4">
+      
+      <!-- Interactive 3D Canvas -->
+      <div class="relative w-full aspect-[16/9] md:aspect-[21/9] bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+        <canvas id="orbit-canvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+
+        <!-- Top-Left Satellite Comparison Legend -->
+        <div class="absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md p-3 rounded-xl border border-slate-800 text-xs shadow-lg flex flex-col gap-2 pointer-events-none max-w-xs">
+          <!-- GEO Item -->
+          <div class="flex items-start gap-2.5">
+            <div class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981] shrink-0 mt-0.5"></div>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1.5">
+                <span class="font-bold text-emerald-300">GEO (Geostationary)</span>
+                <span class="text-[9px] bg-emerald-950/80 px-1 rounded text-emerald-400 font-mono border border-emerald-800/40">Tilt: 0°</span>
+              </div>
+              <span id="legend-geo-desc" class="text-[11px] text-slate-300 leading-tight mt-0.5">
+                Orbiting equator in sync with Earth spin
+              </span>
+            </div>
+          </div>
+
+          <!-- GSO Item -->
+          <div class="flex items-start gap-2.5 border-t border-slate-800 pt-2">
+            <div class="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_8px_#f59e0b] shrink-0 mt-0.5"></div>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1.5">
+                <span class="font-bold text-amber-300">GSO (Geosynchronous)</span>
+                <span id="legend-gso-tilt" class="text-[9px] bg-amber-950/80 px-1 rounded text-amber-400 font-mono border border-amber-800/40">Tilt: 35°</span>
+              </div>
+              <span id="legend-gso-desc" class="text-[11px] text-slate-300 leading-tight mt-0.5">
+                Orbiting in tilted 24h orbital plane
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top-Right Cycle Clock & Ground Coordinates HUD -->
+        <div class="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-md p-3 rounded-xl border border-slate-800 text-xs shadow-lg flex flex-col gap-1.5 pointer-events-none text-right font-mono">
+          <!-- Cycle Counter -->
+          <div class="flex items-center justify-end gap-2">
+            <span class="text-[10px] text-slate-400 font-sans uppercase font-bold tracking-wider">Orbital Cycle:</span>
+            <span id="hud-cycle-counter" class="text-xs font-bold text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">
+              Cycle 1 • 00:00 / 24h
+            </span>
+          </div>
+
+          <!-- Progress Bar inside HUD -->
+          <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden my-0.5">
+            <div id="cycle-progress-bar" class="h-full bg-gradient-to-r from-cyan-400 to-amber-400 rounded-full transition-all duration-75" style="width: 0%;"></div>
+          </div>
+          
+          <!-- GEO Coordinates -->
+          <div class="flex items-center justify-end gap-2 text-emerald-400">
+            <span class="text-[10px] text-slate-400 font-sans font-semibold">GEO Ground:</span>
+            <span class="font-bold text-emerald-300">0.0° N, 0.0° E (Fixed)</span>
+          </div>
+
+          <!-- GSO Coordinates -->
+          <div class="flex items-center justify-end gap-2 text-amber-400">
+            <span class="text-[10px] text-slate-400 font-sans font-semibold">GSO Ground:</span>
+            <span id="hud-gso-pos" class="font-bold text-amber-300">+00.0° N, 0.0° E</span>
+          </div>
+        </div>
+
+        <!-- Interaction Hint -->
+        <div class="absolute bottom-3 left-3 hidden sm:block text-[10px] text-slate-500 bg-slate-900/70 px-2 py-1 rounded pointer-events-none">
+          🖱️ Click & Drag to orbit in 3D • Scroll to zoom
+        </div>
+      </div>
+
+      <!-- Interactive Controls: GSO Inclination Slider & Time Speed Slider -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        
+        <!-- GSO Inclination Angle Slider -->
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <span>📐</span> GSO Orbital Inclination: <span id="tilt-display" class="text-amber-400 font-mono text-sm">35.0°</span>
+            </span>
+            <span class="text-[10px] text-slate-400 font-mono">Tilt relative to equator</span>
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <input id="gso-tilt-slider" type="range" min="0" max="65" step="1" value="35" class="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer slider-thumb accent-amber-400">
+            <span class="text-xs font-mono text-slate-400 w-10 text-right">65°</span>
+          </div>
+
+          <!-- Tilt Presets -->
+          <div class="flex items-center gap-1.5 pt-1 overflow-x-auto text-[10px]">
+            <button class="tilt-preset px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-all" data-tilt="0">0° (Becomes GEO)</button>
+            <button class="tilt-preset px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-all" data-tilt="15">15° (Mild Figure-8)</button>
+            <button class="tilt-preset px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-all" data-tilt="35">35° (Standard GSO)</button>
+            <button class="tilt-preset px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-all" data-tilt="55">55° (High Latitude / BeiDou)</button>
+          </div>
+        </div>
+
+        <!-- Simulation Speed & Playback Controls -->
+        <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 flex flex-col gap-2 justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <span>⏱️</span> Orbital Cycle Speed
+            </span>
+            <span id="speed-display" class="text-xs font-mono font-bold text-cyan-300">1.5 hr / sec (1 cycle in 16s)</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button id="btn-play-pause" class="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition-all shadow">
+              Pause
+            </button>
+            <input id="speed-slider" type="range" min="0.2" max="6.0" step="0.2" value="1.5" class="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer slider-thumb accent-cyan-400">
+            <button id="btn-reset-cam" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition-all font-medium">
+              Reset View
+            </button>
+          </div>
+
+          <div class="text-[10px] text-slate-400 flex items-center justify-between pt-0.5">
+            <span>Slow (0.2h/s)</span>
+            <span>Fast (6h/s • 4s per cycle)</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick Comparison Matrix Strip -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+        <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">Cycle Duration</div>
+          <div class="font-mono font-bold text-white text-sm mt-0.5">23h 56m 04s</div>
+          <div class="text-[9px] text-slate-400">1 Sidereal Day (Both)</div>
+        </div>
+
+        <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">Speed at 35,786 km</div>
+          <div class="font-mono font-bold text-white text-sm mt-0.5">3.074 km/s</div>
+          <div class="text-[9px] text-slate-400">11,068 km/h (Both)</div>
+        </div>
+
+        <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] text-emerald-400 uppercase font-semibold">GEO Ground Track</div>
+          <div class="font-mono font-bold text-emerald-300 text-sm mt-0.5">Stationary Point</div>
+          <div class="text-[9px] text-slate-400">0° Lat • 0° Longitude</div>
+        </div>
+
+        <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] text-amber-400 uppercase font-semibold">GSO Ground Track</div>
+          <div class="font-mono font-bold text-amber-300 text-sm mt-0.5">Repeating Figure-8</div>
+          <div class="text-[9px] text-slate-400">North-South Analemma</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Educational Deep-Dive Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+      <div class="glass-card rounded-xl p-4 flex flex-col gap-2">
+        <div class="text-cyan-400 font-bold text-sm flex items-center gap-1.5">
+          <span>🌌</span> In Inertial Space View
+        </div>
+        <p class="text-slate-300 leading-relaxed">
+          Switch to <strong>Inertial Space View</strong> to see Earth rotating at its steady 24-hour rate while:
+        </p>
+        <ul class="list-disc list-inside space-y-1 text-slate-300">
+          <li><strong>GEO (Green)</strong> orbits directly around the equator in exact lockstep with Earth's rotation.</li>
+          <li><strong>GSO (Amber)</strong> orbits in a tilted circular plane, crossing the equator twice per 24-hour cycle.</li>
+        </ul>
+      </div>
+
+      <div class="glass-card rounded-xl p-4 flex flex-col gap-2">
+        <div class="text-amber-400 font-bold text-sm flex items-center gap-1.5">
+          <span>🌍</span> In Earth-Relative View
+        </div>
+        <p class="text-slate-300 leading-relaxed">
+          Switch to <strong>Earth-Relative View</strong> to lock the camera with Earth's surface:
+        </p>
+        <ul class="list-disc list-inside space-y-1 text-slate-300">
+          <li><strong>GEO</strong> appears completely frozen motionless in space.</li>
+          <li><strong>GSO</strong> traces the famous 3D <strong>Figure-8 (analemma)</strong>, climbing into the northern sky for 12 hours, dipping south for 12 hours, and returning to the exact same point every 24 hours!</li>
+        </ul>
+      </div>
+
+      <div class="glass-card rounded-xl p-4 flex flex-col gap-2">
+        <div class="text-emerald-400 font-bold text-sm flex items-center gap-1.5">
+          <span>💡</span> Why Figure-8 Repeats Perfectly
+        </div>
+        <p class="text-slate-300 leading-relaxed">
+          Because both satellites have an orbital period of exactly <strong>one sidereal day (86,164 seconds)</strong>, the geometry repeats continuously:
+        </p>
+        <div class="bg-slate-900/90 p-2 rounded border border-slate-800 font-mono text-[11px] text-amber-300 text-center font-bold">
+          1 Complete Loop = Exactly 24 Hours
+        </div>
+        <p class="text-slate-400">
+          Every single day at the exact same hour, the GSO satellite returns to the exact same point in the sky.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const canvas = document.getElementById('orbit-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Orbital constants
+    const EARTH_RADIUS = 6378.14; // km
+    const GEO_RADIUS = 42164.14; // km (35,786 km altitude)
+
+    // Simulation State
+    const state = {
+      running: true,
+      timeHours: 0,
+      totalHoursElapsed: 0,
+      cycleCount: 1,
+      speedHrPerSec: 1.5,
+      gsoTiltDeg: 35.0,
+      frameMode: 'space', // 'space' (Inertial Space / Orbiting) or 'earth' (Earth-relative / Figure-8)
+      
+      // 3D Camera Angles
+      camYaw: 0.5,
+      camPitch: 0.38,
+      camDist: 105000, // km in view
+      isDragging: false,
+      lastMouseX: 0,
+      lastMouseY: 0,
+
+      // Satellite Trailing History (breadcrumbs of past positions for glowing comet tails)
+      geoTrail: [],
+      gsoTrail: []
+    };
+
+    function resize() {
+      const w = canvas.parentElement.clientWidth;
+      const h = canvas.parentElement.clientHeight;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Controls
+    const btnPlayPause = document.getElementById('btn-play-pause');
+    btnPlayPause.addEventListener('click', () => {
+      state.running = !state.running;
+      btnPlayPause.textContent = state.running ? 'Pause' : 'Resume';
+    });
+
+    const speedSlider = document.getElementById('speed-slider');
+    const speedDisplay = document.getElementById('speed-display');
+    speedSlider.addEventListener('input', (e) => {
+      state.speedHrPerSec = parseFloat(e.target.value);
+      const cycleSec = (24.0 / state.speedHrPerSec).toFixed(1);
+      speedDisplay.textContent = state.speedHrPerSec.toFixed(1) + ' hr / sec (1 cycle in ' + cycleSec + 's)';
+    });
+
+    const tiltSlider = document.getElementById('gso-tilt-slider');
+    const tiltDisplay = document.getElementById('tilt-display');
+    const legendTilt = document.getElementById('legend-gso-tilt');
+    tiltSlider.addEventListener('input', (e) => {
+      state.gsoTiltDeg = parseFloat(e.target.value);
+      tiltDisplay.textContent = state.gsoTiltDeg.toFixed(1) + '°';
+      legendTilt.textContent = 'Tilt: ' + state.gsoTiltDeg.toFixed(0) + '°';
+      state.gsoTrail = []; // Reset trail on tilt change
+    });
+
+    document.querySelectorAll('.tilt-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.gsoTiltDeg = parseFloat(btn.dataset.tilt);
+        tiltSlider.value = state.gsoTiltDeg;
+        tiltDisplay.textContent = state.gsoTiltDeg.toFixed(1) + '°';
+        legendTilt.textContent = 'Tilt: ' + state.gsoTiltDeg.toFixed(0) + '°';
+        state.gsoTrail = [];
+      });
+    });
+
+    // Frame Mode Switcher
+    const btnFrameEarth = document.getElementById('btn-frame-earth');
+    const btnFrameSpace = document.getElementById('btn-frame-space');
+    const legendGeoDesc = document.getElementById('legend-geo-desc');
+    const legendGsoDesc = document.getElementById('legend-gso-desc');
+
+    function setFrameMode(mode) {
+      state.frameMode = mode;
+      state.geoTrail = [];
+      state.gsoTrail = [];
+
+      if (mode === 'earth') {
+        btnFrameEarth.className = "frame-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 shadow transition-all flex items-center gap-1.5";
+        btnFrameSpace.className = "frame-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5";
+        legendGeoDesc.textContent = "Fixed over 0.0° Lat (Single Point)";
+        legendGsoDesc.textContent = "Cycles North/South in Figure-8 loop";
+      } else {
+        btnFrameSpace.className = "frame-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 shadow transition-all flex items-center gap-1.5";
+        btnFrameEarth.className = "frame-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5";
+        legendGeoDesc.textContent = "Orbiting equator in sync with Earth spin";
+        legendGsoDesc.textContent = "Orbiting in tilted 24h orbital plane";
+      }
+    }
+
+    btnFrameEarth.addEventListener('click', () => setFrameMode('earth'));
+    btnFrameSpace.addEventListener('click', () => setFrameMode('space'));
+
+    document.getElementById('btn-reset-cam').addEventListener('click', () => {
+      state.camYaw = 0.5;
+      state.camPitch = 0.38;
+      state.camDist = 105000;
+    });
+
+    // Mouse Navigation
+    canvas.addEventListener('mousedown', (e) => {
+      state.isDragging = true;
+      state.lastMouseX = e.clientX;
+      state.lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => state.isDragging = false);
+
+    window.addEventListener('mousemove', (e) => {
+      if (!state.isDragging) return;
+      const dx = e.clientX - state.lastMouseX;
+      const dy = e.clientY - state.lastMouseY;
+      state.lastMouseX = e.clientX;
+      state.lastMouseY = e.clientY;
+
+      state.camYaw += dx * 0.008;
+      state.camPitch = Math.max(-1.4, Math.min(1.4, state.camPitch + dy * 0.008));
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 0.9 : 1.1;
+      state.camDist = Math.max(25000, Math.min(220000, state.camDist * factor));
+    }, { passive: false });
+
+    // 3D Projection Utility
+    function project3D(x, y, z, cx, cy, scale) {
+      // Rotate by yaw (around Y axis)
+      const cosY = Math.cos(state.camYaw);
+      const sinY = Math.sin(state.camYaw);
+      const x1 = x * cosY - z * sinY;
+      const z1 = x * sinY + z * cosY;
+
+      // Rotate by pitch (around X axis)
+      const cosP = Math.cos(state.camPitch);
+      const sinP = Math.sin(state.camPitch);
+      const y2 = y * cosP - z1 * sinP;
+      const z2 = y * sinP + z1 * cosP;
+
+      return {
+        screenX: cx + x1 * scale,
+        screenY: cy - y2 * scale,
+        depth: z2
+      };
+    }
+
+    // Animation Loop
+    let lastTime = performance.now();
+
+    function render(now) {
+      requestAnimationFrame(render);
+
+      const dt = Math.min(0.1, (now - lastTime) / 1000);
+      lastTime = now;
+
+      if (state.running) {
+        state.totalHoursElapsed += dt * state.speedHrPerSec;
+        state.timeHours = state.totalHoursElapsed % 24.0;
+        state.cycleCount = Math.floor(state.totalHoursElapsed / 24.0) + 1;
+      }
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const scale = (Math.min(w, h) * 0.42) / state.camDist;
+
+      // Clear canvas
+      ctx.fillStyle = '#030712';
+      ctx.fillRect(0, 0, w, h);
+
+      // Starfield background
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      for (let i = 0; i < 70; i++) {
+        const sx = (i * 157) % w;
+        const sy = (i * 113) % h;
+        ctx.fillRect(sx, sy, 1, 1);
+      }
+
+      // Orbital Math
+      const orbitFraction = state.timeHours / 24.0;
+      const trueAnomaly = orbitFraction * Math.PI * 2;
+      const tiltRad = (state.gsoTiltDeg * Math.PI) / 180.0;
+
+      // Earth Spin Angle:
+      // In 'space' mode, Earth physically spins around its axis once every 24h!
+      // In 'earth' mode, Earth is stationary relative to camera frame.
+      const earthSpinAngle = state.frameMode === 'space' ? trueAnomaly : 0;
+
+      // 1. Calculate GEO position:
+      // In 'space' mode: GEO orbits at trueAnomaly around equator (Y=0)
+      // In 'earth' mode: GEO is stationary at angle 0!
+      let geoPos;
+      if (state.frameMode === 'space') {
+        geoPos = {
+          x: GEO_RADIUS * Math.cos(trueAnomaly),
+          y: 0,
+          z: GEO_RADIUS * Math.sin(trueAnomaly)
+        };
+      } else {
+        geoPos = {
+          x: GEO_RADIUS,
+          y: 0,
+          z: 0
+        };
+      }
+
+      // 2. Calculate GSO position:
+      let gsoPos;
+      if (state.frameMode === 'space') {
+        // Tilted circular orbit in space
+        gsoPos = {
+          x: GEO_RADIUS * Math.cos(trueAnomaly),
+          y: GEO_RADIUS * Math.sin(trueAnomaly) * Math.sin(tiltRad),
+          z: GEO_RADIUS * Math.sin(trueAnomaly) * Math.cos(tiltRad)
+        };
+      } else {
+        // Earth-relative 3D Figure-8
+        const lat = Math.asin(Math.sin(tiltRad) * Math.sin(trueAnomaly));
+        const relLon = Math.atan2(Math.cos(tiltRad) * Math.sin(trueAnomaly), Math.cos(trueAnomaly)) - trueAnomaly;
+        gsoPos = {
+          x: GEO_RADIUS * Math.cos(lat) * Math.cos(relLon),
+          y: GEO_RADIUS * Math.sin(lat),
+          z: GEO_RADIUS * Math.cos(lat) * Math.sin(relLon)
+        };
+      }
+
+      // Record Breadcrumb Trails (Glowing Comet Tails)
+      if (state.running) {
+        state.geoTrail.push({ ...geoPos });
+        state.gsoTrail.push({ ...gsoPos });
+        // Keep trail length to about 1/3 of an orbit (~40 points)
+        if (state.geoTrail.length > 45) state.geoTrail.shift();
+        if (state.gsoTrail.length > 45) state.gsoTrail.shift();
+      }
+
+      // 3. Draw Orbit Path Wireframes
+      // GEO Full Path
+      ctx.beginPath();
+      const numSegments = 120;
+      for (let i = 0; i <= numSegments; i++) {
+        const theta = (i / numSegments) * Math.PI * 2;
+        const px = GEO_RADIUS * Math.cos(theta);
+        const py = 0;
+        const pz = GEO_RADIUS * Math.sin(theta);
+        const p = project3D(px, py, pz, cx, cy, scale);
+        if (i === 0) ctx.moveTo(p.screenX, p.screenY); else ctx.lineTo(p.screenX, p.screenY);
+      }
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)'; // Emerald for GEO
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // GSO Full Path (Tilted circle in space mode, Figure-8 in earth mode)
+      ctx.beginPath();
+      for (let i = 0; i <= numSegments; i++) {
+        const theta = (i / numSegments) * Math.PI * 2;
+        let px, py, pz;
+        if (state.frameMode === 'space') {
+          px = GEO_RADIUS * Math.cos(theta);
+          py = GEO_RADIUS * Math.sin(theta) * Math.sin(tiltRad);
+          pz = GEO_RADIUS * Math.sin(theta) * Math.cos(tiltRad);
+        } else {
+          const lat = Math.asin(Math.sin(tiltRad) * Math.sin(theta));
+          const relLon = Math.atan2(Math.cos(tiltRad) * Math.sin(theta), Math.cos(theta)) - theta;
+          px = GEO_RADIUS * Math.cos(lat) * Math.cos(relLon);
+          py = GEO_RADIUS * Math.sin(lat);
+          pz = GEO_RADIUS * Math.cos(lat) * Math.sin(relLon);
+        }
+        const p = project3D(px, py, pz, cx, cy, scale);
+        if (i === 0) ctx.moveTo(p.screenX, p.screenY); else ctx.lineTo(p.screenX, p.screenY);
+      }
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.75)'; // Amber for GSO Figure-8
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Draw Figure-8 Ground Track on Earth Surface (Projected onto globe in earth mode)
+      if (state.frameMode === 'earth') {
+        ctx.beginPath();
+        for (let i = 0; i <= numSegments; i++) {
+          const theta = (i / numSegments) * Math.PI * 2;
+          const lat = Math.asin(Math.sin(tiltRad) * Math.sin(theta));
+          const relLon = Math.atan2(Math.cos(tiltRad) * Math.sin(theta), Math.cos(theta)) - theta;
+          const sx = EARTH_RADIUS * 1.01 * Math.cos(lat) * Math.cos(relLon);
+          const sy = EARTH_RADIUS * 1.01 * Math.sin(lat);
+          const sz = EARTH_RADIUS * 1.01 * Math.cos(lat) * Math.sin(relLon);
+          const p = project3D(sx, sy, sz, cx, cy, scale);
+          if (i === 0) ctx.moveTo(p.screenX, p.screenY); else ctx.lineTo(p.screenX, p.screenY);
+        }
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.95)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // 4. Draw Animated Comet Trails
+      if (state.gsoTrail.length > 1) {
+        for (let t = 1; t < state.gsoTrail.length; t++) {
+          const pPrev = project3D(state.gsoTrail[t-1].x, state.gsoTrail[t-1].y, state.gsoTrail[t-1].z, cx, cy, scale);
+          const pCurr = project3D(state.gsoTrail[t].x, state.gsoTrail[t].y, state.gsoTrail[t].z, cx, cy, scale);
+          const alpha = (t / state.gsoTrail.length) * 0.9;
+          ctx.beginPath();
+          ctx.moveTo(pPrev.screenX, pPrev.screenY);
+          ctx.lineTo(pCurr.screenX, pCurr.screenY);
+          ctx.strokeStyle = "rgba(245, 158, 11, " + alpha + ")";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+      }
+
+      if (state.frameMode === 'space' && state.geoTrail.length > 1) {
+        for (let t = 1; t < state.geoTrail.length; t++) {
+          const pPrev = project3D(state.geoTrail[t-1].x, state.geoTrail[t-1].y, state.geoTrail[t-1].z, cx, cy, scale);
+          const pCurr = project3D(state.geoTrail[t].x, state.geoTrail[t].y, state.geoTrail[t].z, cx, cy, scale);
+          const alpha = (t / state.geoTrail.length) * 0.8;
+          ctx.beginPath();
+          ctx.moveTo(pPrev.screenX, pPrev.screenY);
+          ctx.lineTo(pCurr.screenX, pCurr.screenY);
+          ctx.strokeStyle = "rgba(245, 158, 11, " + alpha + ")";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+      }
+
+      // 5. Draw Earth Globe with Realistic Rotating Continents
+      const earthProj = project3D(0, 0, 0, cx, cy, scale);
+      const earthRadPix = EARTH_RADIUS * scale;
+
+      // Atmosphere Glow
+      const atmosGrad = ctx.createRadialGradient(earthProj.screenX, earthProj.screenY, earthRadPix * 0.88, earthProj.screenX, earthProj.screenY, earthRadPix * 1.18);
+      atmosGrad.addColorStop(0, "rgba(56, 189, 248, 0.4)");
+      atmosGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
+      ctx.fillStyle = atmosGrad;
+      ctx.beginPath();
+      ctx.arc(earthProj.screenX, earthProj.screenY, earthRadPix * 1.18, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Earth Deep Ocean Base
+      const earthGrad = ctx.createRadialGradient(earthProj.screenX - earthRadPix*0.3, earthProj.screenY - earthRadPix*0.3, 0, earthProj.screenX, earthProj.screenY, earthRadPix);
+      earthGrad.addColorStop(0, "#1d4ed8");
+      earthGrad.addColorStop(0.65, "#0f2e5c");
+      earthGrad.addColorStop(1, "#07162c");
+      ctx.fillStyle = earthGrad;
+      ctx.beginPath();
+      ctx.arc(earthProj.screenX, earthProj.screenY, earthRadPix, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Clip continents to the Earth sphere circle
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(earthProj.screenX, earthProj.screenY, earthRadPix - 0.5, 0, Math.PI * 2);
+      ctx.clip();
+
+      // Simplified World Continents [lon, lat]
+      const continents = [
+        // North America
+        [[-168, 65], [-140, 70], [-100, 70], [-75, 52], [-60, 52], [-70, 42], [-80, 25], [-97, 21], [-83, 9], [-96, 16], [-105, 22], [-117, 32], [-124, 48], [-148, 60], [-168, 65]],
+        // South America
+        [[-77, 8], [-60, 10], [-35, -5], [-35, -9], [-42, -23], [-53, -33], [-65, -45], [-71, -55], [-75, -50], [-70, -20], [-80, 1], [-77, 8]],
+        // Europe
+        [[-10, 36], [-1, 44], [9, 54], [14, 68], [30, 70], [60, 68], [60, 55], [40, 45], [23, 38], [12, 44], [-3, 37], [-10, 36]],
+        // Africa
+        [[-10, 36], [10, 37], [32, 31], [43, 13], [51, 12], [40, -5], [30, -30], [18, -34], [12, -18], [9, 4], [-12, 8], [-17, 21], [-10, 36]],
+        // Asia
+        [[30, 45], [60, 55], [75, 73], [135, 72], [170, 60], [140, 52], [120, 35], [106, 11], [80, 15], [73, 18], [50, 27], [35, 28], [30, 45]],
+        // Australia
+        [[114, -22], [120, -35], [138, -35], [151, -34], [142, -11], [130, -15], [114, -22]],
+        // Greenland
+        [[-50, 60], [-30, 70], [-25, 82], [-55, 70], [-50, 60]]
+      ];
+
+      // Clip and Draw Continents on 3D rotating globe
+      continents.forEach(poly => {
+        // 1. Transform each vertex to 3D camera coordinates
+        const camPts = poly.map(pt => {
+          const lonRad = (pt[0] * Math.PI / 180.0) + earthSpinAngle;
+          const latRad = (pt[1] * Math.PI / 180.0);
+          const px = EARTH_RADIUS * Math.cos(latRad) * Math.cos(lonRad);
+          const py = EARTH_RADIUS * Math.sin(latRad);
+          const pz = EARTH_RADIUS * Math.cos(latRad) * Math.sin(lonRad);
+
+          // Rotate by yaw
+          const cosY = Math.cos(state.camYaw);
+          const sinY = Math.sin(state.camYaw);
+          const x1 = px * cosY - pz * sinY;
+          const z1 = px * sinY + pz * cosY;
+
+          // Rotate by pitch
+          const cosP = Math.cos(state.camPitch);
+          const sinP = Math.sin(state.camPitch);
+          const y2 = py * cosP - z1 * sinP;
+          const z2 = py * sinP + z1 * cosP;
+
+          return { x: x1, y: y2, z: z2 };
+        });
+
+        // 2. Sutherland-Hodgman clipping against horizon plane (z >= 0)
+        const clipped = [];
+        const n = camPts.length;
+        for (let i = 0; i < n; i++) {
+          const curr = camPts[i];
+          const prev = camPts[(i + n - 1) % n];
+          const currIn = curr.z >= 0;
+          const prevIn = prev.z >= 0;
+
+          if (currIn) {
+            if (!prevIn) {
+              const t = -prev.z / (curr.z - prev.z);
+              let ix = prev.x + t * (curr.x - prev.x);
+              let iy = prev.y + t * (curr.y - prev.y);
+              const dist = Math.hypot(ix, iy);
+              if (dist > 1e-4) {
+                ix = (ix / dist) * EARTH_RADIUS;
+                iy = (iy / dist) * EARTH_RADIUS;
+              }
+              clipped.push({ x: ix, y: iy, z: 0 });
+            }
+            clipped.push(curr);
+          } else if (prevIn) {
+            const t = -prev.z / (curr.z - prev.z);
+            let ix = prev.x + t * (curr.x - prev.x);
+            let iy = prev.y + t * (curr.y - prev.y);
+            const dist = Math.hypot(ix, iy);
+            if (dist > 1e-4) {
+              ix = (ix / dist) * EARTH_RADIUS;
+              iy = (iy / dist) * EARTH_RADIUS;
+            }
+            clipped.push({ x: ix, y: iy, z: 0 });
+          }
+        }
+
+        // 3. Render clipped polygon on screen
+        if (clipped.length >= 3) {
+          ctx.beginPath();
+          clipped.forEach((pt, idx) => {
+            const sx = cx + pt.x * scale;
+            const sy = cy - pt.y * scale;
+            if (idx === 0) ctx.moveTo(sx, sy);
+            else ctx.lineTo(sx, sy);
+          });
+          ctx.closePath();
+          ctx.fillStyle = "rgba(34, 197, 94, 0.75)"; // Rich emerald continent green
+          ctx.fill();
+          ctx.strokeStyle = "rgba(22, 101, 52, 0.9)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      });
+
+      // Draw Rotating Longitude Meridians (Segments on front hemisphere)
+      for (let m = 0; m < 12; m++) {
+        const meridianLon = (m / 12) * Math.PI * 2 + earthSpinAngle;
+        ctx.beginPath();
+        let drawing = false;
+        for (let latStep = -18; latStep <= 18; latStep++) {
+          const latA = (latStep / 18) * (Math.PI / 2);
+          const mx = EARTH_RADIUS * Math.cos(latA) * Math.cos(meridianLon);
+          const my = EARTH_RADIUS * Math.sin(latA);
+          const mz = EARTH_RADIUS * Math.cos(latA) * Math.sin(meridianLon);
+          const p = project3D(mx, my, mz, cx, cy, scale);
+          if (p.depth >= 0) {
+            if (!drawing) {
+              ctx.moveTo(p.screenX, p.screenY);
+              drawing = true;
+            } else {
+              ctx.lineTo(p.screenX, p.screenY);
+            }
+          } else {
+            drawing = false;
+          }
+        }
+        ctx.strokeStyle = (m === 0) ? "rgba(255, 255, 255, 0.5)" : "rgba(56, 189, 248, 0.22)";
+        ctx.lineWidth = (m === 0) ? 1.5 : 0.8;
+        ctx.stroke();
+      }
+
+      // Draw Rotating Latitude Circles (Equator, Tropics - front hemisphere only)
+      [-23.44, 0, 23.44].forEach((latDeg) => {
+        const latRad = latDeg * Math.PI / 180.0;
+        const rLat = EARTH_RADIUS * Math.cos(latRad);
+        const yLat = EARTH_RADIUS * Math.sin(latRad);
+        ctx.beginPath();
+        let drawing = false;
+        for (let s = 0; s <= 64; s++) {
+          const lonA = (s / 64) * Math.PI * 2 + earthSpinAngle;
+          const px = rLat * Math.cos(lonA);
+          const py = yLat;
+          const pz = rLat * Math.sin(lonA);
+          const p = project3D(px, py, pz, cx, cy, scale);
+          if (p.depth >= 0) {
+            if (!drawing) {
+              ctx.moveTo(p.screenX, p.screenY);
+              drawing = true;
+            } else {
+              ctx.lineTo(p.screenX, p.screenY);
+            }
+          } else {
+            drawing = false;
+          }
+        }
+        ctx.strokeStyle = (latDeg === 0) ? "rgba(16, 185, 129, 0.85)" : "rgba(56, 189, 248, 0.25)";
+        ctx.lineWidth = (latDeg === 0) ? 2 : 1;
+        ctx.stroke();
+      });
+
+      // Restore clipping
+      ctx.restore();
+
+      // Outer Earth Rim Outline
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.7)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(earthProj.screenX, earthProj.screenY, earthRadPix, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Earth Axis Pole line
+      const poleN = project3D(0, EARTH_RADIUS * 1.35, 0, cx, cy, scale);
+      const poleS = project3D(0, -EARTH_RADIUS * 1.35, 0, cx, cy, scale);
+      ctx.beginPath();
+      ctx.moveTo(poleN.screenX, poleN.screenY);
+      ctx.lineTo(poleS.screenX, poleS.screenY);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // 6. Draw Beams down to Earth Surface
+      const geoTargetProj = project3D(EARTH_RADIUS * (geoPos.x / GEO_RADIUS), 0, EARTH_RADIUS * (geoPos.z / GEO_RADIUS), cx, cy, scale);
+      const geoSatProj = project3D(geoPos.x, geoPos.y, geoPos.z, cx, cy, scale);
+
+      // GEO Beam & Beacon (draw if satellite or target is facing, with depth check)
+      ctx.beginPath();
+      ctx.moveTo(geoSatProj.screenX, geoSatProj.screenY);
+      ctx.lineTo(geoTargetProj.screenX, geoTargetProj.screenY);
+      ctx.strokeStyle = geoTargetProj.depth >= 0 ? 'rgba(16, 185, 129, 0.65)' : 'rgba(16, 185, 129, 0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      if (geoTargetProj.depth >= 0) {
+        ctx.beginPath();
+        ctx.arc(geoTargetProj.screenX, geoTargetProj.screenY, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#10b981';
+        ctx.fill();
+        ctx.strokeStyle = '#a7f3d0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // GSO Beam & Beacon (Tracking to sub-satellite point on Earth)
+      const gsoTargetProj = project3D(EARTH_RADIUS * (gsoPos.x / GEO_RADIUS), EARTH_RADIUS * (gsoPos.y / GEO_RADIUS), EARTH_RADIUS * (gsoPos.z / GEO_RADIUS), cx, cy, scale);
+      const gsoSatProj = project3D(gsoPos.x, gsoPos.y, gsoPos.z, cx, cy, scale);
+
+      ctx.beginPath();
+      ctx.moveTo(gsoSatProj.screenX, gsoSatProj.screenY);
+      ctx.lineTo(gsoTargetProj.screenX, gsoTargetProj.screenY);
+      ctx.strokeStyle = gsoTargetProj.depth >= 0 ? 'rgba(245, 158, 11, 0.65)' : 'rgba(245, 158, 11, 0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      if (gsoTargetProj.depth >= 0) {
+        ctx.beginPath();
+        ctx.arc(gsoTargetProj.screenX, gsoTargetProj.screenY, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fill();
+        ctx.strokeStyle = '#fde68a';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // 7. Draw Satellites (Active Pulsing Nodes)
+      // GEO Satellite (Emerald)
+      ctx.beginPath();
+      ctx.arc(geoSatProj.screenX, geoSatProj.screenY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#10b981';
+      ctx.fill();
+      ctx.strokeStyle = '#34d399';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText(state.frameMode === 'earth' ? 'GEO (Fixed)' : 'GEO (Orbiting)', geoSatProj.screenX + 10, geoSatProj.screenY + 4);
+
+      // GSO Satellite (Amber)
+      ctx.beginPath();
+      ctx.arc(gsoSatProj.screenX, gsoSatProj.screenY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText(state.frameMode === 'earth' ? 'GSO (Figure-8)' : 'GSO (Tilted Orbit)', gsoSatProj.screenX + 10, gsoSatProj.screenY + 4);
+
+      // 8. Update Live HUD Telemetry & Cycle Progress Bar
+      const gsoLatDeg = (Math.asin(Math.sin(tiltRad) * Math.sin(trueAnomaly)) * 180 / Math.PI);
+      const gsoLonDeg = (Math.atan2(Math.cos(tiltRad) * Math.sin(trueAnomaly), Math.cos(trueAnomaly)) - trueAnomaly) * 180 / Math.PI;
+
+      document.getElementById('hud-gso-pos').textContent = 
+        (gsoLatDeg >= 0 ? '+' : '') + gsoLatDeg.toFixed(1) + '° N, ' + 
+        (gsoLonDeg >= 0 ? '+' : '') + gsoLonDeg.toFixed(1) + '° E';
+
+      const hr = Math.floor(state.timeHours);
+      const min = Math.floor((state.timeHours - hr) * 60);
+      const timeStr = String(hr).padStart(2, '0') + ':' + String(min).padStart(2, '0') + ' / 24h';
+
+      document.getElementById('hud-cycle-counter').textContent = "Cycle " + state.cycleCount + " • " + timeStr;
+      document.getElementById('cycle-progress-bar').style.width = ((state.timeHours / 24.0) * 100).toFixed(1) + '%';
+    }
+
+    render(performance.now());
+  </script>
+</body>
+</html>

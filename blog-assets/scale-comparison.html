@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Solar Power: Constellation Fleet & Global Power Simulator</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 3px; }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+    .slider-thumb::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      box-shadow: 0 0 10px #38bdf8;
+      border: 2px solid #ffffff;
+    }
+    .amber-thumb::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #f59e0b;
+      cursor: pointer;
+      box-shadow: 0 0 10px #f59e0b;
+      border: 2px solid #ffffff;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen p-3 md:p-6 flex flex-col items-center select-none">
+
+  <!-- Main Container -->
+  <div class="w-full max-w-5xl flex flex-col gap-5">
+    
+    <!-- Top Header -->
+    <div class="glass-card rounded-2xl p-4 md:p-5 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+            CONSTELLATION FLEET SIMULATOR
+          </span>
+          <span class="text-xs text-slate-400 font-mono">GEO: 35,786 km Altitude</span>
+        </div>
+        <h1 class="text-lg md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+          <span>🛰️</span> Space Solar Constellation & Global Power Fleet
+        </h1>
+        <p class="text-xs text-slate-400 mt-1">
+          Add satellites around the 264,925 km orbital ring to visualize fleet spacing and calculate real-time global clean power generation!
+        </p>
+      </div>
+
+      <!-- Center Anchor Toggle -->
+      <div class="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-800 self-stretch md:self-auto justify-center">
+        <button id="btn-center-sat" class="center-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 shadow transition-all flex items-center gap-1.5" data-center="sat">
+          <span>🛰️</span> Center: Sat #1
+        </button>
+        <button id="btn-center-earth" class="center-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5" data-center="earth">
+          <span>🌍</span> Center: Earth
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Canvas Viewport & Constellation Controls -->
+    <div class="glass-card rounded-2xl p-4 md:p-5 shadow-2xl flex flex-col gap-4">
+      
+      <!-- Canvas Frame -->
+      <div class="relative w-full aspect-[16/9] md:aspect-[21/9] bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+        <canvas id="viewport-canvas" class="w-full h-full block"></canvas>
+
+        <!-- Top-Right Power Generation HUD -->
+        <div class="absolute top-3 right-3 bg-slate-900/90 backdrop-blur-md p-3 rounded-xl border border-cyan-500/40 text-xs shadow-xl flex flex-col gap-1 pointer-events-none max-w-[210px] sm:max-w-xs text-right z-10">
+          <div class="text-[10px] text-cyan-300 uppercase font-bold tracking-wider">Clean Power to Earth Grid</div>
+          <div id="hud-total-power" class="text-emerald-400 font-mono font-black text-base sm:text-xl">2.0 GW</div>
+          <div id="hud-annual-energy" class="text-[11px] font-mono text-slate-300">17.5 TWh / year</div>
+          <div id="hud-equivalent" class="text-[10px] text-amber-300 font-medium mt-0.5 leading-tight">
+            Covers: ~800,000 European homes
+          </div>
+        </div>
+
+        <!-- Bottom-Right Telemetry HUD (Directly underneath Power card) -->
+        <div class="absolute bottom-3 right-3 bg-slate-900/85 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-slate-800 text-xs font-mono shadow-lg flex flex-col gap-1 pointer-events-none max-w-[240px] sm:max-w-xs z-10 text-right">
+          <div class="flex items-center justify-end gap-2">
+            <span class="text-[10px] text-slate-400 uppercase font-semibold">Center Focus</span>
+            <span id="hud-center-badge" class="text-[10px] text-emerald-400 font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">
+              ● SATELLITE #1 CENTERED
+            </span>
+          </div>
+          <div id="fov-width" class="text-cyan-300 font-bold text-sm">Visible Width: 95,000 km</div>
+          <div id="fov-scale" class="text-[10px] text-slate-400">1 pixel ≈ 100 km</div>
+          <div id="zoom-desc" class="text-[11px] text-amber-300 font-sans mt-0.5">
+            Showing orbital ring & constellation fleet
+          </div>
+        </div>
+
+        <!-- Center Crosshair Reticle -->
+        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div class="w-10 h-10 border border-cyan-500/30 rounded-full flex items-center justify-center">
+            <div class="w-1 h-1 bg-cyan-400 rounded-full"></div>
+          </div>
+          <div class="absolute w-16 h-px bg-cyan-500/20"></div>
+          <div class="absolute h-16 w-px bg-cyan-500/20"></div>
+        </div>
+
+        <!-- Mouse Navigation Tip -->
+        <div class="absolute bottom-3 left-3 hidden sm:block text-[10px] text-slate-500 bg-slate-900/70 px-2 py-1 rounded pointer-events-none">
+          🖱️ Scroll mouse wheel to zoom • Adjust constellation size below
+        </div>
+      </div>
+
+      <!-- Controls Grid: Satellite Count Slider + Zoom Slider -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        
+        <!-- Constellation Fleet Size Slider -->
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <span>🛰️</span> Fleet Size: <span id="sat-count-display" class="text-amber-400 font-mono text-sm">1 Satellite</span>
+            </span>
+            <span id="spacing-display" class="text-[11px] text-slate-400 font-mono">Spacing: 264,925 km</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="sat-count-slider" type="range" min="1" max="3600" step="1" value="1" class="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer amber-thumb accent-amber-500">
+            <input id="sat-count-input" type="number" min="1" max="3600" value="1" class="w-16 bg-slate-950 border border-slate-700 rounded px-2 py-0.5 text-xs text-amber-300 font-mono text-center">
+          </div>
+          <!-- Constellation Presets -->
+          <div class="flex items-center gap-1.5 pt-1 overflow-x-auto text-[10px]">
+            <button class="preset-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-all" data-count="1">1 (Demo)</button>
+            <button class="preset-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-all" data-count="10">10 (Small Nation)</button>
+            <button class="preset-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-all" data-count="100">100 (UK/France)</button>
+            <button class="preset-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-all" data-count="500">500 (US Grid)</button>
+            <button class="preset-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-all" data-count="1600">1,600 (100% Global Electricity)</button>
+            <button class="preset-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-all" data-count="3600">3,600 (Full GEO Belt)</button>
+          </div>
+        </div>
+
+        <!-- Zoom Slider -->
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex flex-col gap-2 justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+              <span>🔍</span> Smooth Camera Zoom
+            </span>
+            <span id="slider-pct" class="text-xs font-mono font-bold text-cyan-300">0% (Whole Orbit)</span>
+          </div>
+          <input id="main-zoom-slider" type="range" min="0" max="100" step="0.2" value="0" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer slider-thumb accent-cyan-400">
+          <!-- Quick Zoom Buttons -->
+          <div class="flex items-center gap-1.5 pt-1 text-[10px]">
+            <button id="btn-zoom-ring" class="step-btn px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all" data-pct="0">🌐 Whole Ring (0%)</button>
+            <button id="btn-zoom-mid" class="step-btn px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all" data-pct="50">🔍 Mid-Scale (50%)</button>
+            <button id="btn-zoom-close" class="step-btn px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all" data-pct="100">🔎 Station Close-up (100%)</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Global Power Satisfaction Meter & Glowing Light Bulb -->
+      <div class="bg-slate-900/95 p-4 rounded-xl border border-cyan-500/30 flex flex-col md:flex-row items-center gap-4 shadow-xl">
+        
+        <!-- Glowing Dynamic Light Bulb Visual -->
+        <div class="flex items-center gap-3 shrink-0">
+          <div class="relative w-14 h-14 flex items-center justify-center">
+            <!-- Radial Glow under Bulb -->
+            <div id="bulb-glow" class="absolute inset-0 rounded-full transition-all duration-300 pointer-events-none" style="background: radial-gradient(circle, rgba(245,158,11,0.2) 0%, rgba(245,158,11,0) 70%);"></div>
+            
+            <!-- SVG Light Bulb with Dynamic Fill & Glow -->
+            <svg class="w-10 h-10 transition-all duration-300 relative z-10" viewBox="0 0 24 24" fill="none">
+              <defs>
+                <linearGradient id="bulbFillGrad" x1="0" y1="1" x2="0" y2="0">
+                  <stop id="bulb-fill-stop1" offset="0%" stop-color="#f59e0b" />
+                  <stop id="bulb-fill-stop2" offset="0%" stop-color="#fef08a" />
+                  <stop id="bulb-fill-stop3" offset="0%" stop-color="#1e293b" stop-opacity="0.6" />
+                </linearGradient>
+              </defs>
+              <!-- Bulb Glass Body -->
+              <path id="bulb-path" d="M9 21h6v-2H9v2zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z" fill="url(#bulbFillGrad)" stroke="#94a3b8" stroke-width="0.75" />
+              <!-- Filament Glow Lines -->
+              <path id="filament-line" d="M10 11l2-3 2 3" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="opacity-40 transition-opacity duration-300" />
+            </svg>
+          </div>
+
+          <div class="flex flex-col">
+            <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">World Electricity Needs</span>
+            <div class="flex items-baseline gap-1.5">
+              <span id="bulb-pct-text" class="font-mono font-black text-lg md:text-xl text-amber-400">0.06%</span>
+              <span class="text-[11px] text-slate-400">satisfied</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Bar & Milestones Section -->
+        <div class="flex-1 w-full flex flex-col gap-1.5">
+          <!-- Bar Header -->
+          <div class="flex items-center justify-between text-[11px]">
+            <span id="meter-status-title" class="font-semibold text-slate-200 flex items-center gap-1">
+              <span>⚡</span> <span id="meter-desc">1 Sat = 2 GW (powers ~800k homes)</span>
+            </span>
+            <span id="meter-milestone" class="font-mono font-bold text-cyan-400">Target: 1,600 Sats for 100%</span>
+          </div>
+
+          <!-- Multi-tier Visual Progress Bar -->
+          <div class="relative w-full h-4 bg-slate-950 rounded-full border border-slate-700/80 overflow-hidden p-0.5">
+            <!-- 100% Mark Line (at 44.4% of total bar width, since max is 225% / 3600 sats) -->
+            <div class="absolute top-0 bottom-0 w-0.5 bg-emerald-400 z-20 shadow-[0_0_8px_#10b981]" style="left: 44.44%;"></div>
+            
+            <!-- Animated Gradient Fill Bar -->
+            <div id="power-progress-fill" class="h-full rounded-full transition-all duration-300 flex items-center justify-end pr-1 text-[9px] font-mono font-bold text-slate-950 shadow" style="width: 0.5%; background: linear-gradient(90deg, #38bdf8 0%, #10b981 44%, #f59e0b 100%);">
+            </div>
+          </div>
+
+          <!-- Milestones Ticks along the Bar -->
+          <div class="relative w-full flex justify-between text-[9px] text-slate-500 font-mono pt-0.5">
+            <span>0%</span>
+            <span class="hidden sm:inline">US Grid (500 Sats)</span>
+            <span class="text-emerald-400 font-bold font-sans">⭐ 100% Planet Electricity (1,600 Sats)</span>
+            <span class="text-amber-400 font-bold font-sans">Max Safe GEO: 225% (3,600 Sats)</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Live Constellation Comparison Strip -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+        <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">Total Baseload Power</div>
+          <div id="stat-power" class="font-mono font-bold text-emerald-300 text-sm mt-0.5">2.0 GW</div>
+          <div id="stat-twh" class="text-[9px] text-slate-500">17.5 TWh / year</div>
+        </div>
+
+        <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">Global Electric Share</div>
+          <div id="stat-global-share" class="font-mono font-bold text-cyan-300 text-sm mt-0.5">0.06%</div>
+          <div class="text-[9px] text-slate-500">of ~3,200 GW global demand</div>
+        </div>
+
+        <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">Between Satellites</div>
+          <div id="stat-spacing" class="font-mono font-bold text-amber-300 text-sm mt-0.5">264,925 km</div>
+          <div id="stat-degrees" class="text-[9px] text-slate-500">360.0° separation</div>
+        </div>
+
+        <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">Total Space Solar Area</div>
+          <div id="stat-area" class="font-mono font-bold text-purple-300 text-sm mt-0.5">12.2 km²</div>
+          <div class="text-[9px] text-slate-500">3.6 × Central Parks</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Context Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+      <div class="glass-card rounded-xl p-4 flex flex-col gap-2">
+        <div class="text-cyan-400 font-bold text-sm flex items-center gap-1.5">
+          <span>⚡</span> 1,600 Satellites = The World
+        </div>
+        <p class="text-slate-300 leading-relaxed">
+          Total global electricity consumption across the entire planet is roughly <strong>28,000 TWh per year</strong> (an average continuous draw of <strong>~3,200 Gigawatts</strong>).
+        </p>
+        <p class="text-slate-300 leading-relaxed">
+          Because each 2.0 GW space solar station delivers 24/7 baseload power, a fleet of just <strong>1,600 satellites</strong> could generate <strong>100% of all electricity consumed on planet Earth</strong>!
+        </p>
+      </div>
+
+      <div class="glass-card rounded-xl p-4 flex flex-col gap-2">
+        <div class="text-amber-400 font-bold text-sm flex items-center gap-1.5">
+          <span>🛰️</span> Spacing Along the 264,925 km Ring
+        </div>
+        <p class="text-slate-300 leading-relaxed">
+          Even with <strong>1,600 massive satellites</strong> in orbit:
+        </p>
+        <div class="bg-slate-900/90 p-2 rounded border border-slate-800 font-mono text-[11px] text-amber-300 text-center font-bold">
+          Spacing: ~165 km (0.225° longitude)
+        </div>
+        <p class="text-slate-400">
+          That is over <strong>47 times wider</strong> than the satellites themselves (3.5 km). There is immense empty space along the geostationary highway!
+        </p>
+      </div>
+
+      <div class="glass-card rounded-xl p-4 flex flex-col gap-2">
+        <div class="text-emerald-400 font-bold text-sm flex items-center gap-1.5">
+          <span>🔍</span> Dual-Anchor Zoom
+        </div>
+        <p class="text-slate-300 leading-relaxed">
+          Toggle between <strong>Center: Satellite #1</strong> and <strong>Center: Earth</strong> to observe:
+        </p>
+        <ul class="list-disc list-inside space-y-1 text-slate-300">
+          <li>From <strong>Earth</strong>: watch the full necklace of constellations encircle the planet.</li>
+          <li>From <strong>Satellite #1</strong>: zoom all the way in to inspect the individual 3.5 km solar grid and 1 km transmitter dish!</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const canvas = document.getElementById('viewport-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Physical Dimensions in Kilometers
+    const EARTH_RADIUS = 6378.14; // km
+    const EARTH_DIAMETER = EARTH_RADIUS * 2; // 12,742 km
+    const GEO_RADIUS = 42164.14; // km from Earth center
+    const GEO_CIRCUMFERENCE = 2 * Math.PI * GEO_RADIUS; // 264,925 km
+    const ARRAY_SIZE = 3.5; // km (3.5 x 3.5 km = 12.25 km^2)
+    const DISH_DIAMETER = 1.0; // km
+
+    // Application State
+    const state = {
+      satelliteCount: 1,
+      centerMode: 'sat', // 'sat' or 'earth'
+      currentCenterOffset: 0.0, // 0.0 = sat #1, 1.0 = earth
+      targetCenterOffset: 0.0,
+
+      pct: 0,        // 0 to 100%
+      targetPct: 0,
+      zoom: 0.0055,  // pixels per km
+      targetZoom: 0.0055
+    };
+
+    function resize() {
+      const w = canvas.parentElement.clientWidth;
+      const h = canvas.parentElement.clientHeight;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Min & Max Zoom calculations
+    function getMinZoom() {
+      return (Math.min(canvas.width, canvas.height) * 0.86) / (2 * GEO_RADIUS);
+    }
+
+    function getMaxZoom() {
+      if (state.targetCenterOffset > 0.5) {
+        return (canvas.height * 0.70) / EARTH_DIAMETER;
+      } else {
+        return (canvas.height * 0.48) / ARRAY_SIZE;
+      }
+    }
+
+    function pctToZoom(pct) {
+      const minZ = getMinZoom();
+      const maxZ = getMaxZoom();
+      const t = Math.max(0, Math.min(100, pct)) / 100;
+      return minZ * Math.pow(maxZ / minZ, t);
+    }
+
+    // Toggle Center Mode
+    const btnCenterSat = document.getElementById('btn-center-sat');
+    const btnCenterEarth = document.getElementById('btn-center-earth');
+    const hudBadge = document.getElementById('hud-center-badge');
+
+    function setCenterMode(mode) {
+      state.centerMode = mode;
+      if (mode === 'sat') {
+        state.targetCenterOffset = 0.0;
+        btnCenterSat.className = "center-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 shadow transition-all flex items-center gap-1.5";
+        btnCenterEarth.className = "center-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5";
+        hudBadge.textContent = "● SATELLITE #1 CENTERED";
+        hudBadge.className = "text-[10px] text-emerald-400 font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40";
+      } else {
+        state.targetCenterOffset = 1.0;
+        btnCenterEarth.className = "center-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500 text-slate-950 shadow transition-all flex items-center gap-1.5";
+        btnCenterSat.className = "center-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all flex items-center gap-1.5";
+        hudBadge.textContent = "● EARTH CENTERED";
+        hudBadge.className = "text-[10px] text-cyan-400 font-bold bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40";
+      }
+      state.targetZoom = pctToZoom(state.targetPct);
+    }
+
+    btnCenterSat.addEventListener('click', () => setCenterMode('sat'));
+    btnCenterEarth.addEventListener('click', () => setCenterMode('earth'));
+
+    // Constellation Satellite Count Controls
+    const satSlider = document.getElementById('sat-count-slider');
+    const satInput = document.getElementById('sat-count-input');
+    const satDisplay = document.getElementById('sat-count-display');
+    const spacingDisplay = document.getElementById('spacing-display');
+
+    function updateConstellationMetrics(count) {
+      state.satelliteCount = count;
+      satSlider.value = count;
+      satInput.value = count;
+      satDisplay.textContent = count === 1 ? '1 Satellite' : count.toLocaleString() + ' Satellites';
+
+      const spacingKm = GEO_CIRCUMFERENCE / count;
+      const spacingDeg = 360 / count;
+      spacingDisplay.textContent = count === 1 ? 'Spacing: Single Sat' : ('Spacing: ' + Math.round(spacingKm).toLocaleString() + ' km (' + (spacingDeg < 1 ? spacingDeg.toFixed(2) : spacingDeg.toFixed(1)) + '°)');
+
+      // Power calculations
+      const powerGW = count * 2.0;
+      const annualTWh = powerGW * 8.76;
+      const globalSharePct = (powerGW / 3200.0) * 100;
+      const totalAreaKm2 = count * 12.2;
+
+      // HUD updates
+      document.getElementById('hud-total-power').textContent = powerGW >= 1000 ? (powerGW / 1000).toFixed(1) + ' TW' : powerGW.toLocaleString() + ' GW';
+      document.getElementById('hud-annual-energy').textContent = Math.round(annualTWh).toLocaleString() + ' TWh / year';
+      
+      let equiv = '';
+      if (count === 1) equiv = 'Covers: ~800,000 European homes';
+      else if (count <= 10) equiv = 'Covers: Ireland or New Zealand total demand';
+      else if (count <= 50) equiv = 'Covers: Singapore or Portugal total grid';
+      else if (count <= 150) equiv = 'Covers: United Kingdom or France power grid';
+      else if (count <= 600) equiv = 'Covers: United States total electricity draw';
+      else if (count < 1600) equiv = globalSharePct.toFixed(1) + '% of all electricity used on Earth!';
+      else if (count === 1600) equiv = '🎉 100% OF ALL GLOBAL ELECTRICITY GENERATION!';
+      else equiv = 'Generates ' + (globalSharePct / 100).toFixed(1) + '× TOTAL planet electricity demand!';
+      document.getElementById('hud-equivalent').textContent = equiv;
+
+      // Bottom Strip updates
+      document.getElementById('stat-power').textContent = powerGW >= 1000 ? (powerGW / 1000).toFixed(2) + ' TW' : powerGW.toFixed(1) + ' GW';
+      document.getElementById('stat-twh').textContent = Math.round(annualTWh).toLocaleString() + ' TWh / year';
+      document.getElementById('stat-global-share').textContent = globalSharePct.toFixed(2) + '%';
+      document.getElementById('stat-spacing').textContent = count === 1 ? '264,925 km' : Math.round(spacingKm).toLocaleString() + ' km';
+      document.getElementById('stat-degrees').textContent = count === 1 ? '360.0° separation' : ((spacingDeg < 1 ? spacingDeg.toFixed(2) : spacingDeg.toFixed(1)) + '° separation');
+      document.getElementById('stat-area').textContent = Math.round(totalAreaKm2).toLocaleString() + ' km²';
+
+      // --- Light Bulb & Power Satisfaction Meter Updates ---
+      const bulbPctEl = document.getElementById('bulb-pct-text');
+      bulbPctEl.textContent = globalSharePct < 10 ? globalSharePct.toFixed(2) + '%' : Math.round(globalSharePct) + '%';
+
+      // Bar width in percentage:
+      // Max satellites is 3,600 (which is 225% of global electricity needs).
+      // Scale bar so 3,600 sats fills 100% of the bar width!
+      // In this scale, 1,600 sats (100% world power) hits exactly 44.44% of the bar width!
+      const barWidthPct = Math.min(100, Math.max(0.8, (count / 3600.0) * 100));
+      const fillBar = document.getElementById('power-progress-fill');
+      fillBar.style.width = barWidthPct + '%';
+      fillBar.textContent = count >= 200 ? (Math.round(globalSharePct) + '%') : '';
+
+      // Update Light Bulb Fill Gradient (SVG linearGradient stop offsets)
+      // Level from 0 to 1
+      const bulbFillLevel = Math.min(1.0, count / 1600.0); // 1.0 when 100% world power is hit
+      const fillStop1 = document.getElementById('bulb-fill-stop1');
+      const fillStop2 = document.getElementById('bulb-fill-stop2');
+      const fillStop3 = document.getElementById('bulb-fill-stop3');
+      const bulbGlow = document.getElementById('bulb-glow');
+      const filamentLine = document.getElementById('filament-line');
+
+      const pctLevel = Math.round(bulbFillLevel * 100);
+      fillStop1.setAttribute('offset', '0%');
+      fillStop2.setAttribute('offset', pctLevel + '%');
+      fillStop3.setAttribute('offset', Math.min(100, pctLevel + 1) + '%');
+
+      // Glow Intensity
+      const glowOpacity = Math.min(0.9, 0.15 + bulbFillLevel * 0.75);
+      const glowRadius = Math.round(20 + bulbFillLevel * 35);
+      bulbGlow.style.background = 'radial-gradient(circle, rgba(245, 158, 11, ' + glowOpacity + ') 0%, rgba(245, 158, 11, 0) ' + glowRadius + '%)';
+      filamentLine.style.opacity = Math.min(1.0, 0.3 + bulbFillLevel * 0.7);
+
+      // Meter Description text
+      const meterDesc = document.getElementById('meter-desc');
+      if (count === 1) {
+        meterDesc.textContent = "1 Sat = 2 GW (powers ~800k homes)";
+      } else if (count < 100) {
+        meterDesc.textContent = count + " Sats = " + powerGW + " GW (powers regional grid)";
+      } else if (count < 500) {
+        meterDesc.textContent = count + " Sats = " + powerGW + " GW (powers major industrial nation)";
+      } else if (count < 1600) {
+        meterDesc.textContent = count + " Sats = " + powerGW + " GW (covers " + globalSharePct.toFixed(1) + "% of planet)";
+      } else if (count === 1600) {
+        meterDesc.textContent = "🎉 1,600 Sats = 3,200 GW: EXACTLY 100% OF WORLD ELECTRICITY!";
+      } else {
+        meterDesc.textContent = count + " Sats = " + (powerGW/1000).toFixed(1) + " TW: " + (globalSharePct).toFixed(0) + "% of world electric needs";
+      }
+    }
+
+    satSlider.addEventListener('input', (e) => updateConstellationMetrics(parseInt(e.target.value)));
+    satInput.addEventListener('change', (e) => {
+      let val = Math.max(1, Math.min(3600, parseInt(e.target.value) || 1));
+      updateConstellationMetrics(val);
+    });
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        updateConstellationMetrics(parseInt(btn.dataset.count));
+      });
+    });
+
+    // Zoom Controls
+    const zoomSlider = document.getElementById('main-zoom-slider');
+    const zoomPctText = document.getElementById('slider-pct');
+
+    zoomSlider.addEventListener('input', (e) => {
+      state.targetPct = parseFloat(e.target.value);
+      state.targetZoom = pctToZoom(state.targetPct);
+      zoomPctText.textContent = Math.round(state.targetPct) + '%';
+    });
+
+    document.querySelectorAll('.step-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = parseFloat(btn.dataset.pct);
+        state.targetPct = p;
+        state.targetZoom = pctToZoom(p);
+        zoomSlider.value = p;
+        zoomPctText.textContent = Math.round(p) + '%';
+      });
+    });
+
+    // Mouse Wheel Zoom
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 3.5 : -3.5;
+      state.targetPct = Math.max(0, Math.min(100, state.targetPct + delta));
+      state.targetZoom = pctToZoom(state.targetPct);
+      zoomSlider.value = state.targetPct;
+      zoomPctText.textContent = Math.round(state.targetPct) + '%';
+    }, { passive: false });
+
+    // Render Loop
+    function render() {
+      requestAnimationFrame(render);
+
+      // Smooth lerp
+      state.pct += (state.targetPct - state.pct) * 0.15;
+      state.zoom += (state.targetZoom - state.zoom) * 0.15;
+      state.currentCenterOffset += (state.targetCenterOffset - state.currentCenterOffset) * 0.12;
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+
+      // Clear Canvas
+      ctx.fillStyle = '#030712';
+      ctx.fillRect(0, 0, w, h);
+
+      // Distant stars background
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      for (let i = 0; i < 70; i++) {
+        const sx = (i * 157) % w;
+        const sy = (i * 113) % h;
+        ctx.fillRect(sx, sy, 1, 1);
+      }
+
+      // COORDINATE SYSTEM:
+      // Offset = 0: Sat #1 is at (cx, cy), Earth is at (cx - GEO_RADIUS * zoom, cy)
+      // Offset = 1: Earth is at (cx, cy), Sat #1 is at (cx + GEO_RADIUS * zoom, cy)
+      const earthX = cx - (1.0 - state.currentCenterOffset) * GEO_RADIUS * state.zoom;
+      const earthY = cy;
+
+      // 1. Draw GEO Orbital Path Ring (Circle around Earth)
+      const ringRadiusPix = GEO_RADIUS * state.zoom;
+      ctx.beginPath();
+      ctx.arc(earthX, earthY, ringRadiusPix, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+      ctx.lineWidth = Math.max(1, Math.min(2.5, state.zoom * 20));
+      ctx.setLineDash([6, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Ring label if whole ring is visible
+      if (state.pct < 30) {
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = '11px monospace';
+        const labelY = state.currentCenterOffset > 0.5 ? (earthY - ringRadiusPix - 8) : (earthY - ringRadiusPix * 0.6);
+        ctx.fillText('GEO Orbit Ring: 264,925 km circumference', earthX - ringRadiusPix + 20, labelY);
+      }
+
+      // 2. Draw Distance Line between Earth surface and Satellite #1
+      const sat1Angle = 0; // Satellite #1 is at angle 0 (along +X from Earth)
+      const sat1X = earthX + Math.cos(sat1Angle) * GEO_RADIUS * state.zoom;
+      const sat1Y = earthY + Math.sin(sat1Angle) * GEO_RADIUS * state.zoom;
+
+      if (state.pct < 75) {
+        const earthSurfaceX = earthX + EARTH_RADIUS * state.zoom;
+        if (earthSurfaceX < sat1X - 10) {
+          ctx.beginPath();
+          ctx.moveTo(earthSurfaceX, cy);
+          ctx.lineTo(sat1X, cy);
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          if (sat1X - earthSurfaceX > 110) {
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('35,786 km altitude (5.6 × Earth radii)', (earthSurfaceX + sat1X) / 2, cy - 8);
+            ctx.textAlign = 'left';
+          }
+        }
+      }
+
+      // 3. Draw Earth
+      const earthRadiusPix = EARTH_RADIUS * state.zoom;
+      if (earthX + earthRadiusPix > -50 && earthX - earthRadiusPix < w + 50) {
+        // Atmosphere Glow
+        const atmosGrad = ctx.createRadialGradient(earthX, earthY, earthRadiusPix * 0.92, earthX, earthY, earthRadiusPix * 1.08);
+        atmosGrad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+        atmosGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+        ctx.fillStyle = atmosGrad;
+        ctx.beginPath();
+        ctx.arc(earthX, earthY, earthRadiusPix * 1.08, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Earth Body
+        const earthGrad = ctx.createRadialGradient(earthX - earthRadiusPix*0.3, earthY - earthRadiusPix*0.2, 0, earthX, earthY, earthRadiusPix);
+        earthGrad.addColorStop(0, '#2563eb');
+        earthGrad.addColorStop(0.7, '#0f3b6d');
+        earthGrad.addColorStop(1, '#081c3b');
+        ctx.fillStyle = earthGrad;
+        ctx.beginPath();
+        ctx.arc(earthX, earthY, earthRadiusPix, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+        ctx.lineWidth = Math.max(1, Math.min(3, state.zoom * 15));
+        ctx.stroke();
+
+        // Equator dashed line
+        ctx.beginPath();
+        ctx.ellipse(earthX, earthY, earthRadiusPix, earthRadiusPix * 0.22, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Earth Label
+        if (earthRadiusPix > 15) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('EARTH', earthX, earthY - 4);
+          ctx.font = '10px monospace';
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText('⌀ 12,742 km', earthX, earthY + 12);
+          ctx.textAlign = 'left';
+        }
+      }
+
+      // 4. Draw Constellation of Satellites along the GEO Ring
+      const numSats = state.satelliteCount;
+      const arrayPix = ARRAY_SIZE * state.zoom; // 3.5 km converted to pixels
+      const isZoomedInOnSat = (arrayPix >= 4);
+
+      // To keep rendering fast for large constellations (up to 3,600), we loop through all satellites:
+      for (let i = 0; i < numSats; i++) {
+        const theta = (i / numSats) * Math.PI * 2;
+        const sx = earthX + Math.cos(theta) * ringRadiusPix;
+        const sy = earthY + Math.sin(theta) * ringRadiusPix;
+
+        // Culling: check if visible on canvas
+        if (sx < -30 || sx > w + 30 || sy < -30 || sy > h + 30) continue;
+
+        if (i === 0 && isZoomedInOnSat) {
+          // Satellite #1 Close-up rendering (3.5 km array & 1 km transmitter dish)
+          const halfSize = arrayPix / 2;
+
+          ctx.fillStyle = '#0a2f58';
+          ctx.fillRect(sx - halfSize, sy - halfSize, arrayPix, arrayPix);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = Math.max(1.5, Math.min(4, arrayPix * 0.02));
+          ctx.strokeRect(sx - halfSize, sy - halfSize, arrayPix, arrayPix);
+
+          // Internal solar cell sub-grids
+          if (arrayPix > 25) {
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+            ctx.lineWidth = 1;
+            const gridCount = 6;
+            for (let g = 1; g < gridCount; g++) {
+              const gx = sx - halfSize + (arrayPix / gridCount) * g;
+              ctx.beginPath(); ctx.moveTo(gx, sy - halfSize); ctx.lineTo(gx, sy + halfSize); ctx.stroke();
+              const gy = sy - halfSize + (arrayPix / gridCount) * g;
+              ctx.beginPath(); ctx.moveTo(sx - halfSize, gy); ctx.lineTo(sx + halfSize, gy); ctx.stroke();
+            }
+          }
+
+          // 1 km Microwave Transmitter Dish
+          const dishPixRadius = Math.max(2, (DISH_DIAMETER / 2) * state.zoom);
+          ctx.beginPath();
+          ctx.arc(sx, sy, dishPixRadius, 0, Math.PI * 2);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fill();
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Dimension Callouts
+          ctx.fillStyle = '#34d399';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('3.5 km', sx, sy - halfSize - 8);
+          ctx.textAlign = 'left';
+          ctx.fillText('3.5 km', sx + halfSize + 8, sy + 4);
+
+          // Transmitter dish label
+          if (dishPixRadius > 18) {
+            ctx.fillStyle = '#030712';
+            ctx.font = 'bold 10px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('1.0 km ⌀ Dish', sx, sy + 3);
+            ctx.textAlign = 'left';
+          }
+
+          // Station Info Label
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('Satellite #1 (2.0 GW Station)', sx, sy + halfSize + 20);
+          ctx.font = '10px monospace';
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText('Solar Array: 12.2 km² • Transmitter: 1.0 km ⌀', sx, sy + halfSize + 34);
+          ctx.textAlign = 'left';
+
+        } else if (i !== 0 && isZoomedInOnSat) {
+          // Other satellites when zoomed in to station level: draw as small square icon if on screen
+          const halfSize = Math.max(2, arrayPix / 2);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(sx - halfSize, sy - halfSize, arrayPix, arrayPix);
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '10px monospace';
+          ctx.fillText('Sat #' + (i + 1), sx + halfSize + 4, sy + 3);
+
+        } else {
+          // Normal/Zoomed out view: draw glowing constellation nodes
+          const dotRadius = numSats > 500 ? 1.5 : numSats > 100 ? 2.5 : 3.5;
+          ctx.beginPath();
+          ctx.arc(sx, sy, dotRadius, 0, Math.PI * 2);
+          ctx.fillStyle = i === 0 ? '#10b981' : '#38bdf8';
+          ctx.fill();
+
+          // Highlight Sat #1 with green radar ring
+          if (i === 0) {
+            ctx.beginPath();
+            ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(52, 211, 153, 0.7)';
+            ctx.setLineDash([2, 2]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            if (numSats <= 50 || state.pct > 15) {
+              ctx.fillStyle = '#34d399';
+              ctx.font = 'bold 10px monospace';
+              ctx.fillText('Sat #1', sx + 14, sy + 3);
+            }
+          }
+        }
+      }
+
+      // Update Telemetry HUD
+      const kmVisibleX = w / state.zoom;
+      document.getElementById('fov-width').textContent = 'Visible Width: ' + Math.round(kmVisibleX).toLocaleString() + ' km';
+      const kmPerPix = 1 / state.zoom;
+      document.getElementById('fov-scale').textContent = kmPerPix >= 1 
+        ? ('1 pixel ≈ ' + kmPerPix.toFixed(1) + ' km')
+        : ('1 km ≈ ' + state.zoom.toFixed(1) + ' pixels');
+
+      const desc = document.getElementById('zoom-desc');
+      if (state.pct < 25) {
+        desc.textContent = 'Whole 264,925 km orbit: ' + numSats.toLocaleString() + ' satellite' + (numSats > 1 ? 's' : '') + ' orbiting Earth';
+      } else if (state.pct < 65) {
+        desc.textContent = state.currentCenterOffset > 0.5 ? 'Focusing on Earth & atmosphere' : 'Approaching Earth & 35,786 km space gap';
+      } else if (state.pct < 90) {
+        desc.textContent = state.currentCenterOffset > 0.5 ? 'Earth continent & equator view' : 'Approaching 12.2 km² solar station';
+      } else {
+        desc.textContent = state.currentCenterOffset > 0.5 ? 'Earth surface scale' : 'Close-up: 3.5 km × 3.5 km solar array & 1 km dish';
+      }
+    }
+
+    // Initialize
+    setCenterMode('sat');
+    updateConstellationMetrics(1);
+    state.targetPct = 0;
+    state.targetZoom = pctToZoom(0);
+    render();
+  </script>
+</body>
+</html>
