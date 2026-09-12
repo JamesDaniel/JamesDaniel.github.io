@@ -160,19 +160,19 @@
         <span class="text-[10px] text-slate-400 font-normal">Tilt: 23.44°</span>
       </div>
       <div class="grid grid-cols-2 gap-1.5">
-        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="80">
+        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="80" data-hour="23.8">
           <div class="font-medium text-emerald-400">Spring Equinox</div>
-          <div class="text-[9px] text-amber-300/90">⚠️ Umbra Eclipse</div>
+          <div class="text-[9px] text-amber-300/90">⚠️ Midnight Eclipse (72m)</div>
         </button>
-        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="172">
+        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="172" data-hour="12.0">
           <div class="font-medium text-amber-400">Summer Solstice</div>
           <div class="text-[9px] text-emerald-400">☀️ 24/7 Full Sun</div>
         </button>
-        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="266">
+        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="266" data-hour="23.8">
           <div class="font-medium text-emerald-400">Autumn Equinox</div>
-          <div class="text-[9px] text-amber-300/90">⚠️ Umbra Eclipse</div>
+          <div class="text-[9px] text-amber-300/90">⚠️ Midnight Eclipse (72m)</div>
         </button>
-        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="355">
+        <button class="season-btn text-[11px] py-1 px-2 rounded bg-slate-800/90 hover:bg-slate-700/90 text-left border border-slate-700/60 transition-all" data-day="355" data-hour="12.0">
           <div class="font-medium text-cyan-400">Winter Solstice</div>
           <div class="text-[9px] text-emerald-400">☀️ 24/7 Full Sun</div>
         </button>
@@ -1252,8 +1252,8 @@
       // Earth umbra tapers down slightly over distance
       const positions = [];
       const indices = [];
-      const baseRadius = earthRadius * 0.98;
-      const endRadius = earthRadius * 0.85;
+      const baseRadius = 2.12;
+      const endRadius = 2.12 * (1.0 - coneLength / 350.0);
 
       for (let i = 0; i <= segments; i++) {
         const theta = (i / segments) * Math.PI * 2;
@@ -1463,7 +1463,7 @@
       const state = {
         running: true,
         timeSpeed: 1.0, // hours per second
-        simTimeHours: 80 * 24 + 12, // Start at Spring Equinox (Day 80), Noon
+        simTimeHours: 80 * 24 + 23.8, // Start at Spring Equinox (Day 80), entering midnight eclipse
         currentView: 'geo', // 'geo', 'heliocentric', 'ground', 'satellite'
         
         // Layers
@@ -1639,7 +1639,8 @@
       document.querySelectorAll('.season-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const day = parseFloat(btn.dataset.day);
-          state.simTimeHours = day * 24.0 + 12.0; // Noon on that day
+          const hour = btn.dataset.hour !== undefined ? parseFloat(btn.dataset.hour) : 12.0;
+          state.simTimeHours = day * 24.0 + hour;
         });
       });
 
@@ -1730,12 +1731,12 @@
         // Astronomical calculations
         const axialTiltRad = 23.44 * Math.PI / 180.0;
         const dayOfYear = (state.simTimeHours / 24.0) % 365.25;
-        const yearFraction = dayOfYear / 365.25;
-        const solarOrbitAngle = yearFraction * 2.0 * Math.PI;
+        // Day 80 is the Spring (Vernal) Equinox where solarOrbitAngle = 0
+        const solarOrbitAngle = ((dayOfYear - 80.0) / 365.25) * 2.0 * Math.PI;
 
-        // Earth Diurnal Spin: 1 sidereal day is ~23.9344696 hours
-        // Angle of Earth rotation relative to vernal equinox
-        const spinAngle = (state.simTimeHours / 23.9344696) * 2.0 * Math.PI;
+        // Earth Diurnal Spin: Synchronized with local solar time (Noon = 12:00 facing Sun)
+        const localHour = ((state.simTimeHours) % 24 + 24) % 24;
+        const spinAngle = solarOrbitAngle + ((localHour - 12.0) / 24.0) * 2.0 * Math.PI;
 
         // In Heliocentric coordinates:
         // Sun is at (0, 0, 0)
@@ -1744,11 +1745,8 @@
         const earthHeliocentricZ = Math.sin(solarOrbitAngle) * SUN_DIST_HELIO_VIEW;
 
         // Sun direction vector in space (from Sun to Earth in ecliptic frame)
-        // At day 80 (vernal equinox), solarOrbitAngle is approx 0
-        const sunDirX = -Math.cos(solarOrbitAngle);
-        const sunDirY = -Math.sin(solarOrbitAngle) * Math.sin(axialTiltRad);
-        const sunDirZ = -Math.sin(solarOrbitAngle) * Math.cos(axialTiltRad);
-        const sunDir = Vec3.create(sunDirX, sunDirY, sunDirZ);
+        // At day 80 (vernal equinox), Sun is along -X in the equatorial plane
+        const sunDir = Vec3.create(-Math.cos(solarOrbitAngle), 0, Math.sin(solarOrbitAngle));
         Vec3.normalize(sunDir, sunDir);
 
         // Earth rotation and axial tilt matrix
@@ -1790,7 +1788,7 @@
           const perpZ = satPos[2] + sunDir[2] * distAlongShadow;
           const perpDist = Math.hypot(perpX, perpY, perpZ);
 
-          const shadowRadiusAtGeo = EARTH_RADIUS * (1.0 - distAlongShadow / 100.0);
+          const shadowRadiusAtGeo = 2.12 * (1.0 - distAlongShadow / 350.0);
           if (perpDist < shadowRadiusAtGeo) {
             inEclipse = true;
           }
@@ -1810,9 +1808,6 @@
         const normRectenna = Vec3.create();
         Vec3.normalize(normRectenna, rectennaPos);
         const cosSun = Vec3.dot(normRectenna, sunDir);
-        // Approximate local solar hour (0 to 24)
-        // Noon when cosSun is +1
-        const localHour = ((state.simTimeHours) % 24 + 24) % 24;
         const lhH = Math.floor(localHour);
         const lhM = Math.floor((localHour - lhH) * 60);
         clockDisplay.textContent = `${String(lhH).padStart(2,'0')}:${String(lhM).padStart(2,'0')}:00 (${lhH >= 6 && lhH < 18 ? 'Daytime' : 'Nighttime'})`;
